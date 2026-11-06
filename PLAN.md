@@ -69,9 +69,10 @@ How we meet them:
   repair can be tens of tokens instead of a full scene.
 * **Cached prefix.** Format rules and the catalog go in a fixed system prefix whose KV
   cache is reused across questions.
-* **Constrained decoding.** A JSON grammar during decoding removes syntax errors, so
-  the engine's refusals are only about content. Both MLX and llama.cpp support it;
-  we choose one at Stage 1.
+* **Constrained decoding.** A JSON grammar during decoding removes most syntax
+  errors, so most engine refusals are about content (truncated or off-schema output
+  can still be refused). Both runtimes are reported to support grammar-constrained
+  decoding; we confirm this and choose one at Stage 1.
 * **No reasoning tokens.** Granite 4.2 and Qwen3.5 can emit "thinking" text. We turn
   it off and train in the non-thinking format, or the latency budget fails.
 * **Measure on the device.** Memory and latency numbers in the model card come from
@@ -125,7 +126,7 @@ with the catalog, at about twice the cost. Stage 1 measures both.
 
 | Option | For | Against |
 | --- | --- | --- |
-| **Local, mlx-lm on the mini (recommended first)** | no cash cost; data and weights stay on our machine; same software family as on-device inference | the mini is an **M1 with 8 GB RAM and about 23 GB free disk**, shared with other heavy jobs; our estimate is that a 3B QLoRA fits in memory but is slow, and 7B+ does not fit. Rough time estimate: 15,000 examples × 600 tokens × 3 epochs ≈ 27 M tokens; at a few hundred tokens/s for training on M1 that is about 1 to 3 days of exclusive heavy-gate time. Stage 1 measures the real rate |
+| **Local, mlx-lm on the mini (recommended first)** | no cash cost; data and weights stay on our machine; same software family as on-device inference | the mini is an **M1 with 8 GB RAM and about 23 GB free disk**, shared with other heavy jobs; our estimate is that a 3B QLoRA fits in memory but is slow, and 7B+ does not fit. Rough time estimate: 15,000 examples × 600 tokens (option (a): no catalog in each example) × 3 epochs ≈ 27 M tokens; at 100 to 300 training tokens/s on M1 that is about 1 to 3 days of exclusive heavy-gate time. Stage 1 measures the real rate |
 | Cloud GPU (fallback) | fast; any size | costs money; data leaves our machine; needs an account and credentials (owner only) |
 
 Cloud reference prices (secondary sources, check the provider page before any
@@ -134,7 +135,7 @@ approval): on-demand H100 about $2.89/h (RunPod Secure Cloud, PCIe; source dated
 ([Spheron, RunPod](https://www.spheron.network/blog/runpod-h100-pricing-2026/),
 [Spheron, Lambda](https://www.spheron.network/blog/lambda-cloud-h100-pricing-2026/),
 [IntuitionLabs](https://intuitionlabs.ai/articles/h100-rental-prices-cloud-comparison)).
-A 3–4B LoRA run on about 20,000 short examples is our estimate of 1 to 2 GPU-hours.
+A 3–4B LoRA run on about 15,000 short examples is our estimate of 1 to 2 GPU-hours.
 
 ## 6. On-device inference
 
@@ -143,8 +144,8 @@ A 3–4B LoRA run on about 20,000 short examples is our estimate of 1 to 2 GPU-h
   (constrained decoding) support at Stage 1, before we depend on them.
 * **Format:** 4-bit weights, adapter fused. With owner approval, we also publish the
   unfused adapter. Fusing into a 4-bit base and quantising again can lose quality; the
-  cleaner path fuses into the bf16 base (one more download of about 6 to 8 GB, which
-  the Stage 1 approval must include). mlx-lm exports GGUF only for Llama- and
+  cleaner path fuses into the bf16 base (one more download of about 6 to 8 GB, part
+  of the Stage 2 approval). mlx-lm exports GGUF only for Llama- and
   Mistral-style models, so a llama.cpp fallback for Granite or Qwen3.5 needs
   llama.cpp's own converter; we check this at Stage 1.
 * **Integration:** the model is one more backend for the Marty agent loop, behind the
@@ -157,8 +158,8 @@ A 3–4B LoRA run on about 20,000 short examples is our estimate of 1 to 2 GPU-h
 held-out sets and runs them with its harness (fresh model per question, public docs
 only, at most 3 repairs, everything recorded). This project never sees those
 questions or answers. We get only total scores and the receipts' hashes, never
-per-item results. **One sealed run per release candidate**, so we cannot tune against
-the sealed sets. **Overlap check:** we give the coordinator a training dataset; the
+per-item results. **One sealed run per release candidate, and at most three release
+candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** we give the coordinator a training dataset; the
 coordinator removes any overlapping items on its side and tells us only the total
 number removed, once per dataset version. A per-item yes/no answer would let us
 rebuild the sealed sets, so we do not ask for one.
@@ -173,7 +174,7 @@ rebuild the sealed sets, so we do not ask for one.
 | Explanation without a critical factual error | blind grader | ≥ 95% |
 | Stated numbers equal solved numbers | automatic (compare step text to engine ratios) | 100% of accepted scenes |
 | Honest refusal on out-of-scope questions | blind grader | ≥ 90% |
-| Latency p50 / p95 and peak memory | measured on named devices | §3 budgets |
+| Latency p50 / p95 and peak memory | measured by us on named devices (not part of the sealed run) | §3 budgets |
 
 **Blind graders** see the question, the accepted scene, the engine report and the
 explanation, not which system wrote it. The baseline is a hosted small model on the
@@ -200,11 +201,11 @@ training.
   solved or that follow by exact arithmetic from the scene. The automatic number check
   enforces this at evaluation time.
 * **Scope.** The model refuses topics the engine cannot show and does not invent
-  geometry. Harmful requests (for example weapon mechanisms) are refused; we ask the
-  coordinator to add a small red-team set to the sealed evaluation.
+  geometry. Harmful requests (for example weapon mechanisms) are refused; we will ask
+  the coordinator to add a small red-team set to the sealed evaluation.
 * **Learners.** Many users may be young. No personal data in training. Learner
   corrections only with recorded consent (a parent or guardian for under-18s); see
-  `DATA.md`.
+  `DATA.md` (next PR).
 * **Model card.** Every release lists known failure modes with examples taken from our
   development split (never from sealed results), and the limits of the checks.
 * **Engine version.** Each model is tied to one engine commit and format version. A
@@ -215,8 +216,8 @@ training.
 | Release | Contents | Gate |
 | --- | --- | --- |
 | v0.0 (now) | plan; data rules and reference generator (next PRs) | reviewed PRs |
-| v0.1 research preview | LoRA adapter + fused 4-bit MLX file, model card, data card, training config, all hashes | the sealed run meets every target in §7; owner approves publishing |
-| v0.2 | adds repair-by-patch training, more components, on-device latency numbers for iPad | same |
+| v0.1 research preview | LoRA adapter + fused 4-bit MLX file, model card, data card, training config, all hashes | the coordinator's sealed run meets every quality target in §7; latency and memory are measured by us on the dev split on named Macs (M1 and one newer chip) and meet the §3 Mac budgets; owner approves publishing |
+| v0.2 | adds repair-by-patch training, more components | same, plus §3 iPad budgets measured on a named iPad |
 | v1.0 | default on-device backend in Marty | learner study and owner decision |
 
 Weights go to a public model host only after owner approval: publishing weights cannot
@@ -252,8 +253,8 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 | Stage | Needs owner approval for |
 | --- | --- |
 | 0. Plan, data rules, generator | nothing (this repository) |
-| 1. Baseline bake-off | installing mlx-lm (MIT) in a virtual environment; downloading two base models; mini time |
-| 2. Training | starting training runs; disk use; cloud spending if used (with a cap) |
+| 1. Baseline bake-off | installing mlx-lm (MIT) in a virtual environment; downloading two 4-bit base models; mini time |
+| 2. Training | starting training runs; downloading the bf16 base for fusing; disk use; cloud spending if used (with a cap) |
 | 3. Evaluation | sending model outputs to the coordinator for the sealed run; the coordinator's use of its subscription for grading |
 | 4. Release | publishing weights and datasets (cannot be undone) |
 
