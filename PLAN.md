@@ -205,7 +205,7 @@ training.
   the coordinator to add a small red-team set to the sealed evaluation.
 * **Learners.** Many users may be young. No personal data in training. Learner
   corrections only with recorded consent (a parent or guardian for under-18s); see
-  `DATA.md` (next PR).
+  [DATA.md](DATA.md).
 * **Model card.** Every release lists known failure modes with examples taken from our
   development split (never from sealed results), and the limits of the checks.
 * **Engine version.** Each model is tied to one engine commit and format version. A
@@ -242,7 +242,7 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 2. **Method: QLoRA with mlx-lm on the mini**, rank 16, loss on answers only. Use cloud
    only if the mini is too slow, with owner approval and a cost cap.
 3. **Data: engine-checked programmatic examples plus repair pairs** from the reference
-   generator, after the owner decides the data-rights questions in `DATA.md` (next PR).
+   generator, after the owner decides the data-rights questions in [DATA.md](DATA.md).
 4. **Device: 4-bit MLX Swift with constrained JSON decoding**, cached prefix, repairs
    as patches.
 5. **Gate: the coordinator's sealed sets** with blind grading; publish only when the
@@ -258,4 +258,4 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 | 3. Evaluation | sending model outputs to the coordinator for the sealed run; the coordinator's use of its subscription for grading |
 | 4. Release | publishing weights and datasets (cannot be undone) |
 
-The data-rights questions in `DATA.md` (next PR) must be decided before Stage 2.
+The data-rights questions in [DATA.md](DATA.md) must be decided before Stage 2.

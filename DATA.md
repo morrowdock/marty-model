@@ -14,9 +14,10 @@ instead of being decided here.
 2. **Engine check.** Every example passes `marty-solid check` (and `--strict` when the
    engine has it). An example that the engine refuses is never a training target. It
    can be the *input* of a repair example.
-3. **Numbers from the engine.** Every number that example text states is either a
-   value in the scene or follows from it by exact arithmetic, and every stated ratio
-   equals the ratio the engine solved.
+3. **Numbers from the engine.** Every stated ratio that the engine solves is compared
+   with the engine's value. Every other stated number is a value in the scene or exact
+   arithmetic on it (never rounded and shown as exact). Each example lists the two
+   kinds separately (`check.engineVerified` and `check.derived`).
 4. **Provenance on every example** ([§5](#5-provenance-schema)).
 5. **No personal data, no private course content, no credentials.**
 6. **No evaluation leakage.** We never read the sealed evaluation sets. Before a
@@ -166,7 +167,8 @@ Every record carries `provenance`:
 | `authorKind` | `program`, `person`, `open-weight-model` or `learner-correction` |
 | `licence` | licence of the example (Apache-2.0 unless stated) |
 | `clearance` | `pending-owner` or `cleared` (set only by the owner, per dataset version) |
-| `generator` | name, version, seed, commit (programmatic) |
+| `templateAuthor` | who wrote the sentence templates (for example `ai-agent:claude-opus-5-5` or `human.<handle>`); decides Q1 |
+| `generator` | name, version, seed, script SHA-256, git commit and a dirty flag (programmatic) |
 | `model` | open-weight model id, revision hash, licence URL, sampling settings (open-weight only) |
 | `engine` | MartyGraphics commit and checker SHA-256 |
 | `created` | date (YYYY-MM-DD) |

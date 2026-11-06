@@ -53,7 +53,8 @@ and `sha256` of the scene bytes.
 | Check | Result |
 | --- | --- |
 | Every scene passes `marty-solid check` (and `--strict` when available) | `<n>/<n>` |
-| Every explanation number matches an engine-solved number | `<n>/<n>` |
+| Every stated engine-solved ratio equals the engine's value | `<n>/<n>` |
+| Every other stated number is exact arithmetic on the scene (listed per example as `derived`) | `<n>/<n>` |
 | Exact and near duplicates removed (method) | `<n removed>` |
 | Overlap with sealed evaluation sets checked by the coordinator (method, no access by us) | `<result>` |
 | Personal data scan (method) | `<result>` |
