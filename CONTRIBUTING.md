@@ -16,13 +16,13 @@ Training data is the most sensitive part of this project. Before you submit an e
 a generator or a dataset:
 
 1. **Rights.** You must have the right to publish it under Apache-2.0. Do not submit
-   text or scenes written by a hosted AI model until the data rules (`DATA.md`,
-   planned) allow that source. If you are not sure, say so in the pull request and do
+   text or scenes written by a hosted AI model unless the data rules
+   ([DATA.md](DATA.md) §3) allow that source. If you are not sure, say so in the pull request and do
    not include the data.
 2. **Engine check.** Every scene must pass the MartyGraphics engine (`marty-solid
    check`, and `--strict` when it is available). Record the engine commit and the
    checker binary hash.
-3. **Provenance.** Every example carries the provenance fields that `DATA.md` lists:
+3. **Provenance.** Every example carries the provenance fields that [DATA.md](DATA.md) §5 lists:
    source, licence, author kind (`program`, `person`, `open-weight-model`,
    `learner-correction`), generator version, engine commit, checker hash and date.
 4. **No personal or private content.** No personal data, no learner data without

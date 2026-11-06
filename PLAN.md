@@ -15,7 +15,8 @@ says "not supported" for questions the engine cannot show.
 So the model needs four skills, in this order of importance:
 
 1. Write valid, compact scene JSON for the current format and component catalog.
-2. Repair a refused scene from the engine's reason (a short patch, not a full rewrite).
+2. Repair a refused scene from the engine's reason (a full corrected scene in v0.1; a
+   short patch from v0.2).
 3. Write short, true explanation steps whose numbers equal the engine's solved numbers,
    and label what is not modelled.
 4. Refuse honestly when the question is out of scope.
@@ -24,7 +25,7 @@ It does **not** need broad world knowledge, long reasoning or long context. That
 why a small model can be enough.
 
 **Typical sizes.** Measured: a component scene with 4 to 6 steps from the reference
-generator (next PR; engine 76104dea) is 670 to 960 bytes; the component catalog is
+[generator](pipeline/README.md) (engine 76104dea) is 670 to 960 bytes; the component catalog is
 about 3.8 KB; a hand-written full scene is 3.7 KB (53 lines). Estimated (no tokenizer
 run yet, about 3 bytes per token for JSON): a scene is about 250 to 350 output tokens
 and the catalog about 1,200 tokens, which can sit in a cached prompt prefix. Stage 1
@@ -65,8 +66,10 @@ How we meet them:
 
 * **Short outputs.** Train on component `use` scenes (about 300 tokens), not on
   hand-built geometry.
-* **Repairs as patches.** The engine accepts patches (`MGSolidParser.applying`), so a
-  repair can be tens of tokens instead of a full scene.
+* **Repairs as patches (from v0.2).** The engine accepts patches
+  (`MGSolidParser.applying`), so a repair can be tens of tokens instead of a full
+  scene. v0.1 repairs rewrite the scene (about 300 tokens) until the engine CLI can
+  check a patch.
 * **Cached prefix.** Format rules and the catalog go in a fixed system prefix whose KV
   cache is reused across questions.
 * **Constrained decoding.** A JSON grammar during decoding removes most syntax
@@ -120,7 +123,8 @@ Starting settings, to be tuned on our development split: rank 16, alpha 32, all
 attention and MLP projections, 2 to 3 epochs, learning rate 1e-4 with cosine decay,
 loss on the answer tokens only. **Sequence length:** a repair example holds the prefix
 (about 1,200 tokens if the catalog is included), the question, the refused scene, the
-reason and the patch, so 2,048 tokens is tight. We choose between (a) training without
+reason and the corrected scene (v0.1) or patch (v0.2), so 2,048 tokens is
+tight. We choose between (a) training without
 the catalog in each example, so the model learns the catalog, and (b) 4,096 tokens
 with the catalog, at about twice the cost. Stage 1 measures both.
 
@@ -159,9 +163,12 @@ held-out sets and runs them with its harness (fresh model per question, public d
 only, at most 3 repairs, everything recorded). This project never sees those
 questions or answers. We get only total scores and the receipts' hashes, never
 per-item results. **One sealed run per release candidate, and at most three release
-candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** we give the coordinator a training dataset; the
-coordinator removes any overlapping items on its side and tells us only the total
-number removed, once per dataset version. A per-item yes/no answer would let us
+candidates per sealed-set version**, so we cannot tune against the sealed sets.
+**Overlap check:** blind, as [DATA.md](DATA.md) §4 describes: the
+coordinator returns only the number of overlapping distinct items in a dataset
+version (at least 1,000 items, fixed and hashed before the check, never built from an
+earlier count), never items or a filtered file; if it is above 0 we discard the whole
+version; at most 3 checks per sealed-set version. A per-item answer would let us
 rebuild the sealed sets, so we do not ask for one.
 
 **Metrics** (the same as the coordinator's existing Prompt→3D runs, so results compare):
@@ -205,7 +212,7 @@ training.
   the coordinator to add a small red-team set to the sealed evaluation.
 * **Learners.** Many users may be young. No personal data in training. Learner
   corrections only with recorded consent (a parent or guardian for under-18s); see
-  `DATA.md` (next PR).
+  [DATA.md](DATA.md).
 * **Model card.** Every release lists known failure modes with examples taken from our
   development split (never from sealed results), and the limits of the checks.
 * **Engine version.** Each model is tied to one engine commit and format version. A
@@ -215,9 +222,9 @@ training.
 
 | Release | Contents | Gate |
 | --- | --- | --- |
-| v0.0 (now) | plan; data rules and reference generator (next PRs) | reviewed PRs |
+| v0.0 (now) | plan, data rules, reference generator | reviewed PRs |
 | v0.1 research preview | LoRA adapter + fused 4-bit MLX file, model card, data card, training config, all hashes | the coordinator's sealed run meets every quality target in §7; latency and memory are measured by us on the dev split on named Macs (M1 and one newer chip) and meet the §3 Mac budgets; owner approves publishing |
-| v0.2 | adds repair-by-patch training, more components | same, plus §3 iPad budgets measured on a named iPad |
+| v0.2 | adds repair-by-patch and compose training, more components | same, plus §3 iPad budgets measured on a named iPad |
 | v1.0 | default on-device backend in Marty | learner study and owner decision |
 
 Weights go to a public model host only after owner approval: publishing weights cannot
@@ -242,9 +249,9 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 2. **Method: QLoRA with mlx-lm on the mini**, rank 16, loss on answers only. Use cloud
    only if the mini is too slow, with owner approval and a cost cap.
 3. **Data: engine-checked programmatic examples plus repair pairs** from the reference
-   generator, after the owner decides the data-rights questions in `DATA.md` (next PR).
+   generator, after the owner decides the data-rights questions in [DATA.md](DATA.md).
 4. **Device: 4-bit MLX Swift with constrained JSON decoding**, cached prefix, repairs
-   as patches.
+   as patches from v0.2.
 5. **Gate: the coordinator's sealed sets** with blind grading; publish only when the
    targets in §7 are met.
 
@@ -258,4 +265,4 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 | 3. Evaluation | sending model outputs to the coordinator for the sealed run; the coordinator's use of its subscription for grading |
 | 4. Release | publishing weights and datasets (cannot be undone) |
 
-The data-rights questions in `DATA.md` (next PR) must be decided before Stage 2.
+The data-rights questions in [DATA.md](DATA.md) must be decided before Stage 2.

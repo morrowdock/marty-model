@@ -6,7 +6,7 @@ solid components. It calls no AI model and uses only the Python standard library
 **Status:** design reference. Its output carries `"clearance": "pending-owner"` and is
 **not cleared for training** until the owner decides the data-rights questions (the
 templates and this script were written by an AI agent, recorded in each example as
-`templateAuthor`; see `DATA.md` when it lands).
+`templateAuthor`; see [DATA.md](../DATA.md) §2).
 
 ## What it does
 
