@@ -15,10 +15,14 @@ Usage:
   python3 pipeline/generate_components.py --engine PATH/marty-solid \\
       --engine-commit 76104dea --count 40 --seed 1 --out examples.jsonl \\
       [--rejects rejects.jsonl] [--components spurPair,planetaryStage] \\
-      [--strict] [--created YYYY-MM-DD]
+      [--created YYYY-MM-DD]
+
+Byte-identical output needs a fixed --created (the default is today's UTC date).
 
 Status: design reference. Output is NOT cleared for training until the owner
-decides the data-rights questions in DATA.md ("clearance": "pending-owner").
+decides the data-rights questions in DATA.md ("clearance": "pending-owner"). The
+sentence templates below were written by an AI agent (Claude Opus 5.5); every
+example records this in provenance.templateAuthor.
 """
 
 import argparse
@@ -36,7 +40,8 @@ from fractions import Fraction
 SCHEMA = "marty-model.example/0"
 REJECT_SCHEMA = "marty-model.reject/0"
 NAME = "generate_components.py"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
+TEMPLATE_AUTHOR = "ai-agent:claude-opus-5-5"
 TITLE_MAX, SAY_MAX = 80, 240  # engine text limits (assembly.title, step.say)
 RATIO_TOLERANCE = 1e-9
 
@@ -51,9 +56,12 @@ class Engine:
     path); `binary` is the file whose SHA-256 goes into provenance.
     """
 
-    def __init__(self, cmd, binary, strict=False, timeout=60):
+    # The checker at MartyGraphics 76104dea accepts exactly `check FILE`. When the
+    # engine gains `check --strict`, add it here and record it in COMMAND.
+    COMMAND = "marty-solid check"
+
+    def __init__(self, cmd, binary, timeout=60):
         self.cmd = list(cmd)
-        self.strict = strict
         self.timeout = timeout
         with open(binary, "rb") as f:
             self.sha256 = hashlib.sha256(f.read()).hexdigest()
@@ -62,28 +70,26 @@ class Engine:
     def close(self):
         self._dir.cleanup()
 
-    @property
-    def command_text(self):
-        return "marty-solid check" + (" --strict" if self.strict else "")
-
     def check(self, scene_text):
         path = os.path.join(self._dir.name, "scene.json")
         with open(path, "w", encoding="utf-8") as f:
             f.write(scene_text)
-        args = self.cmd + ["check", path] + (["--strict"] if self.strict else [])
+        args = self.cmd + ["check", path]
         try:
             done = subprocess.run(args, capture_output=True, timeout=self.timeout, check=False)
         except subprocess.TimeoutExpired:
             return {"ok": False, "reason": "engine.timeout", "part": None}
+        fault = {"ok": False, "part": None, "exit": done.returncode,
+                 "stderr": done.stderr[:200].decode("utf-8", "replace")}
         try:
             report = json.loads(done.stdout.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
-            return {"ok": False, "reason": "engine.output", "part": None}
+            return {**fault, "reason": "engine.output"}
         if not isinstance(report, dict) or not isinstance(report.get("ok"), bool):
-            return {"ok": False, "reason": "engine.output", "part": None}
+            return {**fault, "reason": "engine.output"}
         # The exit status and the report must agree; anything else is an engine fault.
         if report["ok"] != (done.returncode == 0):
-            return {"ok": False, "reason": "engine.exit", "part": None}
+            return {**fault, "reason": "engine.exit"}
         return report
 
 
@@ -97,11 +103,30 @@ def frac_text(f):
 
 
 def num_text(x):
-    """A length or factor without trailing zeros: 48, 1.5, 2.333."""
+    """An EXACT decimal without trailing zeros: 48, 1.5, 248.75.
+
+    Refuses values with no finite decimal form (for example 1/3), so a rounded
+    number is never presented as exact.
+    """
     x = Fraction(x)
-    if x.denominator == 1:
-        return str(x.numerator)
-    return f"{float(x):.4g}"
+    scaled, places = x, 0
+    while scaled.denominator != 1:
+        scaled *= 10
+        places += 1
+        if places > 12:
+            raise ValueError(f"{x} has no short exact decimal form")
+    sign = "-" if scaled < 0 else ""
+    digits = str(abs(scaled.numerator)).rjust(places + 1, "0")
+    text = digits if places == 0 else f"{digits[:-places]}.{digits[-places:]}"
+    assert Fraction(sign + text) == x
+    return sign + text
+
+
+def ratio_text(num, den):
+    """'16/36 = 4/9' when the fraction reduces, else '13/40'."""
+    reduced = Fraction(num, den)
+    raw = f"{num}/{den}"
+    return raw if frac_text(reduced) == raw else f"{raw} = {frac_text(reduced)}"
 
 
 def factor_text(f):
@@ -119,8 +144,13 @@ def factor_text(f):
 
 
 class Draft:
-    def __init__(self, question, title, steps, expected):
-        self.question, self.title, self.steps, self.expected = question, title, steps, expected
+    """`expected`: ratios the engine solves and the generator compares.
+    `derived`: other stated numbers, computed here by exact arithmetic from the
+    parameters (the engine does not report them)."""
+
+    def __init__(self, question, title, steps, expected, derived):
+        self.question, self.title, self.steps = question, title, steps
+        self.expected, self.derived = expected, derived
 
 
 NOT_MODELLED = "Checked by the engine: shapes, joints{extra}. Not modelled: strength, friction and losses."
@@ -149,13 +179,14 @@ def spur_pair_text(rng, iid, v):
                 "so their teeth are the same size and mesh.", "camera": "hero"},
         {"say": f"Input: the pinion turns. Each turn moves {p} teeth past the point where the gears touch.",
          "highlight": [f"{iid}.input"], "spin": 1},
-        {"say": f"Output: the wheel turns {p}/{w} = {frac_text(ratio)} of a turn per pinion turn, "
+        {"say": f"Output: the wheel turns {ratio_text(p, w)} of a turn per pinion turn, "
                 "in the opposite direction.", "highlight": [f"{iid}.output"], "spin": 1},
         {"say": f"So the wheel is {factor_text(1 / ratio)} times slower. The centre distance is "
                 f"({p} + {w}) × {num_text(m)} / 2 = {num_text(centre)} mm.", "highlight": [iid]},
         {"say": NOT_MODELLED.format(extra=", tooth meshing and the ratio"), "camera": "iso"},
     ]
-    return Draft(question, title, steps, {f"{iid}.pinion": Fraction(1), f"{iid}.wheel": -ratio})
+    return Draft(question, title, steps, {f"{iid}.pinion": Fraction(1), f"{iid}.wheel": -ratio},
+                 {"centreDistanceMM": num_text(centre), "speedFactor": frac_text(1 / ratio)})
 
 
 def planetary(rng):
@@ -186,7 +217,8 @@ def planetary_text(rng, iid, v):
          "camera": "iso"},
         {"say": NOT_MODELLED.format(extra=", tooth meshing and the ratio")},
     ]
-    return Draft(question, title, steps, {f"{iid}.sun": Fraction(1), f"{iid}.carrier": carrier})
+    return Draft(question, title, steps, {f"{iid}.sun": Fraction(1), f"{iid}.carrier": carrier},
+                 {"ringTeeth": str(r), "speedFactor": frac_text(1 / carrier)})
 
 
 def slider_crank(rng):
@@ -211,7 +243,8 @@ def slider_crank_text(rng, iid, v):
                 "crank turn.", "highlight": [f"{iid}.output"], "spin": 1},
         {"say": NOT_MODELLED.format(extra=" and the crank-rod linkage")},
     ]
-    return Draft(question, title, steps, {f"{iid}.crank": Fraction(1)})
+    # Only the input drive is engine-solved here; the stroke is derived.
+    return Draft(question, title, steps, {f"{iid}.crank": Fraction(1)}, {"strokeMM": str(2 * r)})
 
 
 def propeller(rng):
@@ -238,7 +271,9 @@ def propeller_text(rng, iid, v):
                 "flatter at the tip, because the tip moves faster.", "highlight": [f"{iid}.blade"]},
         {"say": "Checked by the engine: closed shapes and joints. Not modelled: air flow, thrust and strength."},
     ]
-    return Draft(question, title, steps, {f"{iid}.hub": Fraction(1)})
+    # Only the input drive is engine-solved here; the angles are parameters.
+    return Draft(question, title, steps, {f"{iid}.hub": Fraction(1)},
+                 {"rootAngleDeg": str(-pitch), "tipAngleDeg": str(-tip)})
 
 
 RECIPES = {
@@ -272,14 +307,16 @@ def text_problems(draft):
 
 def ratio_mismatch(expected, solved):
     """First part id whose solved ratio is missing or differs from the text's number, else None."""
+    if not isinstance(solved, dict):
+        return "ratios"
     for part, want in sorted(expected.items()):
         got = solved.get(part)
-        if not isinstance(got, (int, float)) or abs(float(want) - got) > RATIO_TOLERANCE:
+        if isinstance(got, bool) or not isinstance(got, (int, float)) or abs(float(want) - got) > RATIO_TOLERANCE:
             return part
     return None
 
 
-def generate(engine, count, seed, components, created, engine_commit, generator_commit=None,
+def generate(engine, count, seed, components, created, engine_commit, generator=None,
              max_attempts_per_example=20):
     """Return (examples, rejects): lists of dicts, in a deterministic order."""
     rng = random.Random(seed)
@@ -303,10 +340,11 @@ def generate(engine, count, seed, components, created, engine_commit, generator_
         base = {"component": component, "with": values, "scene": scene,
                 "sceneSha256": hashlib.sha256(scene.encode("utf-8")).hexdigest()}
         if not report["ok"]:
+            extra = {k: report[k] for k in ("exit", "stderr") if k in report}
             rejects.append({"schema": REJECT_SCHEMA, "attempt": attempts, **base,
-                            "reason": report.get("reason"), "part": report.get("part")})
+                            "reason": report.get("reason"), "part": report.get("part"), **extra})
             continue
-        wrong = ratio_mismatch(draft.expected, report.get("ratios") or {})
+        wrong = ratio_mismatch(draft.expected, report.get("ratios", {}))
         if wrong is not None:
             rejects.append({"schema": REJECT_SCHEMA, "attempt": attempts, **base,
                             "reason": "generator.ratioMismatch", "part": wrong})
@@ -322,16 +360,21 @@ def generate(engine, count, seed, components, created, engine_commit, generator_
                 "authorKind": "program",
                 "licence": "Apache-2.0",
                 "clearance": "pending-owner",
+                "templateAuthor": TEMPLATE_AUTHOR,
                 "component": component,
                 "with": values,
-                "generator": {"name": NAME, "version": VERSION, "seed": seed, "commit": generator_commit},
+                "generator": {"name": NAME, "version": VERSION, "seed": seed, **(generator or {})},
                 "engine": {"commit": engine_commit, "checkerSha256": engine.sha256},
                 "created": created,
                 "sceneSha256": base["sceneSha256"],
             },
-            "check": {"command": engine.command_text, "ok": True, "reason": None,
+            "check": {"command": engine.COMMAND, "ok": True, "reason": None,
                       "ratios": report.get("ratios"), "parts": report.get("parts"),
-                      "triangles": report.get("triangles")},
+                      "triangles": report.get("triangles"),
+                      # Ratios stated in the text that the engine solved and we compared:
+                      "engineVerified": sorted(draft.expected),
+                      # Other stated numbers: exact arithmetic on the parameters, not engine output:
+                      "derived": draft.derived},
         })
     return examples, rejects
 
@@ -343,13 +386,22 @@ def write_jsonl(path, rows):
             f.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
 
 
-def git_head(path):
+def generator_identity():
+    """Script SHA-256, plus git commit and whether the script differs from it."""
+    path = os.path.abspath(__file__)
+    with open(path, "rb") as f:
+        ident = {"sha256": hashlib.sha256(f.read()).hexdigest(), "commit": None, "dirty": None}
+    folder = os.path.dirname(path)
     try:
-        out = subprocess.run(["git", "-C", path, "rev-parse", "HEAD"], capture_output=True, text=True,
-                             timeout=10, check=True).stdout.strip()
-        return out if re.fullmatch(r"[0-9a-f]{40}", out) else None
+        head = subprocess.run(["git", "-C", folder, "rev-parse", "HEAD"], capture_output=True, text=True,
+                              timeout=10, check=True).stdout.strip()
+        status = subprocess.run(["git", "-C", folder, "status", "--porcelain", "--", path], capture_output=True,
+                                text=True, timeout=10, check=True).stdout.strip()
+        if re.fullmatch(r"[0-9a-f]{40}", head):
+            ident["commit"], ident["dirty"] = head, bool(status)
     except (OSError, subprocess.SubprocessError):
-        return None
+        pass
+    return ident
 
 
 def main(argv=None):
@@ -361,12 +413,14 @@ def main(argv=None):
     ap.add_argument("--out", required=True, help="new JSON Lines file (must not exist)")
     ap.add_argument("--rejects", help="new JSON Lines file for refused scenes (must not exist)")
     ap.add_argument("--components", default=",".join(RECIPES), help="comma-separated component ids")
-    ap.add_argument("--strict", action="store_true", help="pass --strict to the checker")
     ap.add_argument("--created", default=datetime.datetime.now(datetime.timezone.utc).date().isoformat())
     a = ap.parse_args(argv)
     if not re.fullmatch(r"[0-9a-f]{7,40}", a.engine_commit):
         ap.error("--engine-commit must be 7-40 lowercase hex characters")
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", a.created):
+    try:
+        if datetime.date.fromisoformat(a.created).isoformat() != a.created:
+            raise ValueError
+    except ValueError:
         ap.error("--created must be YYYY-MM-DD")
     if not 1 <= a.count <= 100_000:
         ap.error("--count must be 1..100000")
@@ -374,14 +428,19 @@ def main(argv=None):
     unknown = [c for c in components if c not in RECIPES]
     if unknown or not components:
         ap.error(f"unknown components {unknown}; known: {sorted(RECIPES)}")
-    for path in filter(None, [a.out, a.rejects]):
+    outputs = [p for p in (a.out, a.rejects) if p]
+    if len({os.path.abspath(p) for p in outputs}) != len(outputs):
+        ap.error("--out and --rejects must be different files")
+    for path in outputs:
         if os.path.exists(path):
             ap.error(f"{path} exists; refusing to overwrite")
+        if not os.path.isdir(os.path.dirname(os.path.abspath(path))):
+            ap.error(f"folder for {path} does not exist")
 
-    engine = Engine([a.engine], a.engine, strict=a.strict)
+    engine = Engine([a.engine], a.engine)
     try:
         examples, rejects = generate(engine, a.count, a.seed, components, a.created, a.engine_commit,
-                                     generator_commit=git_head(os.path.dirname(os.path.abspath(__file__))))
+                                     generator=generator_identity())
     finally:
         engine.close()
     write_jsonl(a.out, examples)

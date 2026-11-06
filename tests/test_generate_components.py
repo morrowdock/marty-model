@@ -5,6 +5,8 @@ Unit tests use tests/fake_engine.py. The integration test runs the real engine o
 when MARTY_SOLID (binary path) and MARTY_SOLID_COMMIT are set; otherwise it skips.
 """
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -37,8 +39,23 @@ class TextHelpers(unittest.TestCase):
         self.assertEqual(g.frac_text(Fraction(12, 36)), "1/3")
         self.assertEqual(g.frac_text(Fraction(6, 2)), "3")
         self.assertEqual(g.factor_text(Fraction(36, 14)), "18/7 ≈ 2.571")
+        self.assertEqual(g.ratio_text(16, 36), "16/36 = 4/9")
+        self.assertEqual(g.ratio_text(13, 40), "13/40")
+
+    def test_num_text_is_exact(self):
         self.assertEqual(g.num_text(Fraction(3, 2)), "1.5")
         self.assertEqual(g.num_text(48), "48")
+        self.assertEqual(g.num_text(Fraction(199 * 5, 4)), "248.75")  # (39 + 160) x 2.5 / 2
+        self.assertEqual(g.num_text(Fraction(-1, 8)), "-0.125")
+        self.assertEqual(g.num_text(Fraction(1, 20)), "0.05")
+        with self.assertRaises(ValueError):
+            g.num_text(Fraction(1, 3))
+
+    def test_every_centre_distance_is_exact(self):
+        for m in (1, 1.5, 2, 2.5, 3):
+            for teeth in range(12 + 16, 40 + 160 + 1):
+                value = teeth * Fraction(str(m)) / 2
+                self.assertEqual(Fraction(g.num_text(value)), value)
 
 
 class Generate(unittest.TestCase):
@@ -62,6 +79,8 @@ class Generate(unittest.TestCase):
                         "sceneSha256", "component", "with"):
                 self.assertIn(key, p)
             self.assertEqual(p["authorKind"], "program")
+            self.assertEqual(p["templateAuthor"], g.TEMPLATE_AUTHOR)
+            self.assertEqual(e["check"]["engineVerified"], sorted(e["check"]["ratios"].keys() & set(e["check"]["engineVerified"])))
             self.assertEqual(p["clearance"], "pending-owner")
             self.assertEqual(len(p["engine"]["checkerSha256"]), 64)
             self.assertTrue(e["check"]["ok"])
@@ -75,8 +94,31 @@ class Generate(unittest.TestCase):
         examples, _ = run(fake(), count=8, components=["spurPair"])
         for e in examples:
             w = e["provenance"]["with"]
-            ratio = g.frac_text(Fraction(w["pinionTeeth"], w["wheelTeeth"]))
-            self.assertIn(f"= {ratio} of a turn", e["scene"])
+            p, wt = w["pinionTeeth"], w["wheelTeeth"]
+            self.assertIn(f"turns {g.ratio_text(p, wt)} of a turn", e["scene"])
+            self.assertTrue(g.ratio_text(p, wt).endswith(g.frac_text(Fraction(p, wt))))
+            self.assertAlmostEqual(e["check"]["ratios"]["gears.wheel"], -p / wt, places=12)
+
+    def test_derived_numbers_are_right_and_stated(self):
+        examples, _ = run(fake(), count=60)
+        for e in examples:
+            w, d, scene = e["provenance"]["with"], e["check"]["derived"], e["scene"]
+            comp = e["provenance"]["component"]
+            for text in d.values():
+                self.assertIn(text, scene)
+            if comp == "spurPair":
+                m = Fraction(str(w["module"]))
+                self.assertEqual(Fraction(d["centreDistanceMM"]), (w["pinionTeeth"] + w["wheelTeeth"]) * m / 2)
+                self.assertIn(f"= {d['centreDistanceMM']} mm", scene)
+            elif comp == "planetaryStage":
+                self.assertEqual(int(d["ringTeeth"]), w["sunTeeth"] + 2 * w["planetTeeth"])
+            elif comp == "sliderCrank":
+                self.assertEqual(int(d["strokeMM"]), 2 * w["radius"])
+            elif comp == "propeller":
+                root, tip = int(d["rootAngleDeg"]), int(d["tipAngleDeg"])
+                self.assertEqual(root, -w["pitch"])
+                self.assertGreater(root, tip)
+                self.assertGreater(tip, 0)
 
     def test_engine_refusal_is_recorded_not_emitted(self):
         examples, rejects = run(fake(), count=20, components=["planetaryStage"])
@@ -99,13 +141,64 @@ class Generate(unittest.TestCase):
             self.assertEqual(examples, [])
             self.assertEqual({r["reason"] for r in rejects}, {reason})
 
-    def test_cli_refuses_to_overwrite(self):
+    def test_timeout_is_rejected(self):
+        engine = g.Engine([sys.executable, FAKE, "--mode=sleep"], FAKE, timeout=1)
+        try:
+            self.assertEqual(engine.check("{}")["reason"], "engine.timeout")
+        finally:
+            engine.close()
+
+
+def wrapper(folder, mode="ok"):
+    """An executable stand-in for the marty-solid binary, for CLI tests."""
+    path = os.path.join(folder, "marty-solid")
+    with open(path, "w") as f:
+        f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --mode={mode} "$@"\n')
+    os.chmod(path, 0o755)
+    return path
+
+
+class CLI(unittest.TestCase):
+    def cli_error(self, args):
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+            g.main(args)
+        self.assertEqual(cm.exception.code, 2)
+        return err.getvalue()
+
+    def base(self, d):
+        return ["--engine", wrapper(d), "--engine-commit", "76104dea", "--count", "4", "--seed", "3",
+                "--created", "2026-11-06"]
+
+    def test_end_to_end(self):
+        with tempfile.TemporaryDirectory() as d:
+            out, rej = os.path.join(d, "ex.jsonl"), os.path.join(d, "rej.jsonl")
+            with contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(g.main(self.base(d) + ["--out", out, "--rejects", rej]), 0)
+            with open(out, encoding="utf-8") as f:
+                rows = [json.loads(line) for line in f]
+            self.assertEqual(len(rows), 4)
+            gen = rows[0]["provenance"]["generator"]
+            self.assertEqual(len(gen["sha256"]), 64)
+            self.assertIn("dirty", gen)
+
+    def test_refuses_to_overwrite(self):
         with tempfile.TemporaryDirectory() as d:
             out = os.path.join(d, "x.jsonl")
             open(out, "w").close()
-            with self.assertRaises(SystemExit):
-                g.main(["--engine", FAKE, "--engine-commit", "76104dea", "--count", "1", "--seed", "1",
-                        "--out", out])
+            self.assertIn("refusing to overwrite", self.cli_error(self.base(d) + ["--out", out]))
+
+    def test_checks_paths_before_running(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "x.jsonl")
+            self.assertIn("must be different", self.cli_error(self.base(d) + ["--out", out, "--rejects", out]))
+            missing = os.path.join(d, "nope", "x.jsonl")
+            self.assertIn("does not exist", self.cli_error(self.base(d) + ["--out", missing]))
+
+    def test_bad_date(self):
+        with tempfile.TemporaryDirectory() as d:
+            args = self.base(d) + ["--out", os.path.join(d, "x.jsonl"), "--created", "2026-02-30"]
+            self.assertIn("--created", self.cli_error(args))
 
 
 @unittest.skipUnless(os.environ.get("MARTY_SOLID") and os.environ.get("MARTY_SOLID_COMMIT"),

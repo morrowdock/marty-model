@@ -4,11 +4,12 @@
 It knows only the built-in component ids and the closed-form ratios the generator
 uses. It is NOT an engine: real checks come from the integration test.
 
-Usage: python3 fake_engine.py [--mode=ok|wrong|garbage|exit] check FILE.json
+Usage: python3 fake_engine.py [--mode=ok|wrong|garbage|exit|sleep] check FILE.json
 """
 
 import json
 import sys
+import time
 
 
 def report(doc):
@@ -35,6 +36,8 @@ def main(argv):
     if mode == "garbage":
         print("not json")
         return 0
+    if mode == "sleep":
+        time.sleep(5)
     assert argv[0] == "check", argv
     with open(argv[1], encoding="utf-8") as f:
         doc = json.load(f)
