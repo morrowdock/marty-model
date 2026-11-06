@@ -389,9 +389,9 @@ def write_jsonl(path, rows):
             f.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
 
 
-def generator_identity():
+def generator_identity(script=__file__):
     """Script SHA-256, plus git commit and whether the script differs from it."""
-    path = os.path.abspath(__file__)
+    path = os.path.abspath(script)
     with open(path, "rb") as f:
         ident = {"sha256": hashlib.sha256(f.read()).hexdigest(), "commit": None, "dirty": None}
     folder = os.path.dirname(path)
