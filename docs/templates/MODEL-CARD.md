@@ -16,6 +16,7 @@ than leaving a field empty. Every number must point to a receipt (file + hash).
 | Base model | `<org/model>` at revision `<commit or hash>` |
 | Base model licence | `<licence name>` (`<URL>`), checked `YYYY-MM-DD` |
 | Licence of this release | `<licence>`; base-model terms that flow down: `<list or none>` |
+| Terms that flow down from training data | `<list or none>` (see the data cards) |
 | Parameters | total `<n>`; trainable (adapter) `<n>` |
 | Context length used in training | `<tokens>` |
 | Files and hashes | `<file>`: sha256 `<hash>` (one line per file) |
@@ -38,7 +39,8 @@ than leaving a field empty. Every number must point to a receipt (file + hash).
 
 * Engine: MartyGraphics commit `<sha>`, checker `<binary name>` sha256 `<hash>`.
 * Check command: `marty-solid check FILE.json` (`--strict` when available).
-* Repair loop: at most `<n>` repairs from the engine's stable reason.
+* Repair loop: at most 3 repairs from the engine's stable reason (the Marty default;
+  write the number used if it is different).
 * An output that the engine refuses is never shown as a checked scene.
 
 ## Training
@@ -62,7 +64,7 @@ model builders never see these sets. Give the set id and hash, not the questions
 | Metric | Result | Target | Set (id, sha256) |
 | --- | --- | --- | --- |
 | Engine acceptance, first try | | | |
-| Engine acceptance within `<n>` repairs | | ≥ 90% | |
+| Engine acceptance within 3 repairs | | ≥ 90% | |
 | Mean repairs per accepted scene | | | |
 | Mechanics correct (blind grader) | | | |
 | Explanation without a critical factual error (blind grader) | | ≥ 95% | |
@@ -73,11 +75,15 @@ model builders never see these sets. Give the set id and hash, not the questions
 * Graders: `<who or which model; blind to which system wrote the output>`.
 * Baselines on the same set: `<models and results>`.
 * Receipts: `<path>` sha256 `<hash>`.
+* Contamination: can the base model's own training data contain the sealed sets?
+  `<no / unknown, and why>`. Did any of our training data come from the sealed sets?
+  `<result of the coordinator's overlap check>`.
 
 ## Safety and honesty labelling
 
 * Every scene the model writes is labelled with its truth tier (engine-checked numbers
-  vs. schematic or illustrative parts), as the engine reports it.
+  vs. schematic or illustrative parts). Today the scene title or steps carry this label;
+  when the engine reports truth tiers, use the engine's value.
 * The model labels parts it did not model ("not modelled") instead of hiding them.
 * Known failure modes: `<list, with examples from the evaluation>`.
 * Content filters or refusals: `<what, how tested>`.

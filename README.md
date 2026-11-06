@@ -5,14 +5,14 @@ A plan for a small, fast, open model that writes **checked**
 learning questions. It must be cheap enough to run on an iPad or a Mac.
 
 **Status: planning.** This repository has no model weights, no training runs and no
-training data yet. It holds the plan, the data rules, card templates and a small
-reference data generator.
+training data yet. It holds the project rules and the card templates. The plan, the
+data rules and a small reference data generator follow in the next pull requests.
 
 ## Why a small model can be enough
 
-MartyGraphics is a deterministic engine. It checks every number in a scene (gear
-ratios, centre distances, tooth phase, closed meshes, text limits) and refuses a wrong
-scene with a stable reason, for example `constraint.gearMesh.phase`. The
+MartyGraphics is a deterministic engine. It checks the mechanical constraints in a
+scene (gear ratios, centre distances, tooth phase, closed meshes, text limits) and
+refuses a wrong scene with a stable reason, for example `constraint.gearMesh.phase`. The
 [Marty](https://github.com/morrowdock/marty) agent loop gives that reason back to the
 model, and the model repairs the scene. Because the engine is the safety net, the model
 only has to be good at authoring. It does not have to be a large general model.
@@ -25,12 +25,10 @@ learner question ──► Marty model ──► scene JSON ──► MartyGraph
                                                 accepted scene + solved numbers
 ```
 
-The engine checks geometry and kinematics. It does not check that an explanation is
-true. So we also measure factual correctness with blind graders.
+The engine checks geometry and kinematics. It does not check strength, torque or
+wear, and it does not check that an explanation is true. So we also measure factual correctness with blind graders.
 
 ## Documents
-
-The plan (`PLAN.md`) and the data design (`DATA.md`) come in the next pull requests.
 
 | File | What it holds |
 | --- | --- |

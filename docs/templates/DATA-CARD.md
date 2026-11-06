@@ -15,6 +15,7 @@ project: the MartyGraphics coordinator owns and describes them.
 | Date created | `YYYY-MM-DD` |
 | Purpose | training / development (never held-out evaluation) |
 | Licence | `<for example Apache-2.0>` |
+| Terms that flow down to users of this data | `<list or none>` |
 | Examples | `<n>` (train `<n>`, development `<n>`) |
 | Files and hashes | `<file>`: sha256 `<hash>` |
 | Format | JSON Lines, one example per line, schema `<schema id>` |
@@ -30,12 +31,15 @@ appear here.
 | Source | Kind | Licence / terms (URL, date checked) | Examples | Share |
 | --- | --- | --- | --- | --- |
 | `<for example programmatic: built-in components>` | program | Apache-2.0 (this repo) | | |
-| `<for example MartyGraphics worked examples>` | person | Apache-2.0 (`<URL>`) | | |
-| `<open-weight model name>` | open-weight model | `<licence URL>` | | |
+| `<for example hand-written MartyGraphics examples; check each provenance.json>` | person | Apache-2.0 (`<URL>`) | | |
+| `<open-weight model name>` | open-weight-model | `<licence URL>` | | |
 
 Author kinds: `program` (rules and templates, no model), `person` (a named human,
 DCO sign-off), `open-weight-model` (name, revision, licence), `learner-correction`
-(only with recorded consent; see `DATA.md`).
+(only with recorded consent; see `DATA.md`). Text or scenes written by a hosted AI
+model are excluded unless `DATA.md` allows that provider.
+
+Is the dataset licence compatible with every source? `<yes / explain>`
 
 ## Per-example provenance
 
@@ -67,8 +71,10 @@ mechanical topics.>`
 
 ## Consent and personal data
 
-`<"No personal data" or, for learner corrections, how consent was recorded, how
-data was de-identified, and how a person can ask for removal.>`
+`<"No personal data" or, for learner corrections: how consent was recorded; how
+consent was recorded for learners under 18 (a parent or guardian); how data was
+de-identified; how a person can ask for removal; and what happens to models already
+trained on the data when consent is withdrawn.>`
 
 ## Changes from the previous version
 
