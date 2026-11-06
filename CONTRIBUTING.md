@@ -35,9 +35,13 @@ a generator or a dataset:
 ## Code
 
 * Python scripts use only the standard library unless a pull request explains why.
-* Add a test for each behaviour you change. When tests exist, run
+* Add a test for each behaviour you change. Run
   `python3 -m unittest discover -s tests`.
 * Keep scripts deterministic: the same seed gives the same bytes.
+* Hosted checks run by hand for an exact head (no automatic PR jobs, no secrets):
+  `gh workflow run ci.yml -f base_sha=<full base SHA> -f head_sha=<full head SHA>`.
+  The Ubuntu job runs the unit tests and the DCO check; the macOS job builds
+  `marty-solid` from MartyGraphics at `engine_sha` and runs the real-engine test.
 
 ## Conduct and security
 

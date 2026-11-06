@@ -44,9 +44,10 @@ Is the dataset licence compatible with every source? `<yes / explain>`
 ## Per-example provenance
 
 Every example carries these fields (see `DATA.md` for the exact schema):
-`id`, `source`, `authorKind`, `licence`, `generator` (name, version, commit, seed),
-`engine` (commit, checker sha256), `check` (command, `ok`, reason, ratios), `created`,
-and `sha256` of the scene bytes.
+`id`, `source`, `authorKind`, `licence`, `clearance`, `templateAuthor`, `generator`
+(name, version, seed, script sha256, commit, dirty), `engine` (commit, checker sha256),
+`check` (command, `ok`, reason, ratios, `engineVerified`, `derived`), `created`, and
+`sceneSha256`.
 
 ## Checks run
 
