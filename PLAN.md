@@ -15,7 +15,8 @@ says "not supported" for questions the engine cannot show.
 So the model needs four skills, in this order of importance:
 
 1. Write valid, compact scene JSON for the current format and component catalog.
-2. Repair a refused scene from the engine's reason (a short patch, not a full rewrite).
+2. Repair a refused scene from the engine's reason (a full corrected scene in v0.1; a
+   short patch from v0.2).
 3. Write short, true explanation steps whose numbers equal the engine's solved numbers,
    and label what is not modelled.
 4. Refuse honestly when the question is out of scope.
@@ -65,8 +66,10 @@ How we meet them:
 
 * **Short outputs.** Train on component `use` scenes (about 300 tokens), not on
   hand-built geometry.
-* **Repairs as patches.** The engine accepts patches (`MGSolidParser.applying`), so a
-  repair can be tens of tokens instead of a full scene.
+* **Repairs as patches (from v0.2).** The engine accepts patches
+  (`MGSolidParser.applying`), so a repair can be tens of tokens instead of a full
+  scene. v0.1 repairs rewrite the scene (about 300 tokens) until the engine CLI can
+  check a patch.
 * **Cached prefix.** Format rules and the catalog go in a fixed system prefix whose KV
   cache is reused across questions.
 * **Constrained decoding.** A JSON grammar during decoding removes most syntax
@@ -120,7 +123,7 @@ Starting settings, to be tuned on our development split: rank 16, alpha 32, all
 attention and MLP projections, 2 to 3 epochs, learning rate 1e-4 with cosine decay,
 loss on the answer tokens only. **Sequence length:** a repair example holds the prefix
 (about 1,200 tokens if the catalog is included), the question, the refused scene, the
-reason and the patch, so 2,048 tokens is tight. We choose between (a) training without
+reason and the corrected scene (v0.1) or patch (v0.2), so 2,048 tokens is tight. We choose between (a) training without
 the catalog in each example, so the model learns the catalog, and (b) 4,096 tokens
 with the catalog, at about twice the cost. Stage 1 measures both.
 
@@ -160,10 +163,10 @@ only, at most 3 repairs, everything recorded). This project never sees those
 questions or answers. We get only total scores and the receipts' hashes, never
 per-item results. **One sealed run per release candidate, and at most three release
 candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** blind, as [DATA.md](DATA.md) §4 describes: the
-coordinator removes overlapping items plus a random 2% of other items and tells us only
-the total; we train only on the returned file and never compare it with ours; at most
-one check per planned release. A per-item answer would let us rebuild the sealed sets,
-so we do not ask for one.
+coordinator returns only the number of overlapping items in a dataset version (at
+least 1,000 items), never items or a filtered file; if it is above 0 we discard the
+whole version; at most 3 checks per planned release. A per-item answer would let us
+rebuild the sealed sets, so we do not ask for one.
 
 **Metrics** (the same as the coordinator's existing Prompt→3D runs, so results compare):
 
@@ -245,7 +248,7 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 3. **Data: engine-checked programmatic examples plus repair pairs** from the reference
    generator, after the owner decides the data-rights questions in [DATA.md](DATA.md).
 4. **Device: 4-bit MLX Swift with constrained JSON decoding**, cached prefix, repairs
-   as patches.
+   as patches from v0.2.
 5. **Gate: the coordinator's sealed sets** with blind grading; publish only when the
    targets in §7 are met.
 

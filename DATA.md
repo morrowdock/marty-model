@@ -58,9 +58,10 @@ so (b) costs the owner about an hour.
 **Q2. Which Anthropic terms apply to our account?** Which agreement covers the Claude
 sessions used so far: a consumer plan (the Consumer Terms name Claude.ai and Claude
 Pro; they do not name Max or Claude Code on the page) or the API under the Commercial
-Terms (§D.4: no competing products or training competing AI models, no reverse
-engineering or duplicating the Services, no support for a third party doing so,
-"except as expressly approved by Anthropic")? The Usage Policy applies to both.
+Terms (§D.4 (a): no building a competing product, "including to train competing AI
+models or resell the Services except as expressly approved by Anthropic"; (b) no
+reverse engineering or duplicating the Services; (c) no support for a third party
+doing so)? The Usage Policy applies to both.
 
 **Q3. OpenAI terms.** Some work across these projects used an OpenAI model through
 Codex. openai.com refused our automated fetches (HTTP
@@ -97,7 +98,7 @@ on them.
 | --- | --- | --- | --- |
 | Anthropic | [Consumer Terms](https://www.anthropic.com/legal/consumer-terms) (effective 2025-10-08), §3 | "You may not access or use, or help another person to access or use, our Services" … "To develop any products or services that compete with our Services, including to develop or train any artificial intelligence or machine learning algorithms or models" | about competing use of the Services; the text does not say "outputs"; whether it covers our model is Q1 |
 | Anthropic | [Usage Policy](https://www.anthropic.com/legal/aup) (page shows effective 2026-11-12, six days after we read it; the version in force today was not checked) | "Use outputs to train an AI model (e.g., "model scraping" or "model distillation") without prior authorization from Anthropic" | the clearest clause on outputs: not allowed unless Anthropic authorises it; applies to all Anthropic services once in force |
-| Anthropic | [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) (effective 2025-06-17), §D.4 | may not "(a) access the Services to build a competing product or service, including to train competing AI models … (b) reverse engineer or duplicate the Services; or (c) support any third party's attempt", "except as expressly approved by Anthropic" | bars competing models; Anthropic can approve exceptions; the Usage Policy still applies |
+| Anthropic | [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) (effective 2025-06-17), §D.4 | may not "(a) access the Services to build a competing product or service, including to train competing AI models or resell the Services except as expressly approved by Anthropic; (b) reverse engineer or duplicate the Services; or (c) support any third party's attempt at any of the conduct restricted in this sentence" | bars competing models; Anthropic may approve exceptions to (a); the Usage Policy still applies |
 | Anthropic | Consumer §4, Commercial §B | Anthropic assigns its rights in Outputs, "if any", to the user | ownership of outputs does not remove the use restrictions |
 | OpenAI | [Terms of Use](https://openai.com/policies/terms-of-use/), [Business Terms](https://openai.com/policies/business-terms/) | **UNVERIFIED**: every fetch returned HTTP 403 | Q3 |
 | Google | [Gemini API Additional Terms](https://aistudio.google.com/docs/terms) (effective 2026-03-23; the old ai.google.dev URL redirects here) | "You may not use the Services to develop models that compete with the Services"; you are responsible for "the use of that content by anyone you share it with" | bars competing models; we do not use Gemini outputs |
@@ -149,25 +150,29 @@ the Stage 1 approval in PLAN.md (download and install).
 | Data card | [template](docs/templates/DATA-CARD.md), every file hashed | — |
 | Clearance | owner sets `clearance` to `cleared` for a dataset version | — |
 
-**Blind overlap check.** A per-item answer, or a filtered file that we compare with our
-own copy, would show which items are in the sealed sets. So:
+**Blind overlap check.** Any per-item answer, and any filtered file that comes back,
+would show which items are in the sealed sets: our generator is deterministic, so we
+could always rebuild the file we sent and compare. So the coordinator never returns
+items, only a count:
 
-1. We give the coordinator one dataset version.
-2. The coordinator removes every item that overlaps a sealed set **and** a random set of
-   other items (at least 2% of the dataset, chosen by the coordinator), and keeps the
-   seed private.
-3. The coordinator returns the filtered file and one number: the total removed.
-4. We train only on the returned file. We never compare it with the file we sent, and
-   we delete our pre-check copy of that version.
-5. At most one check per planned release. A new version for a later release must add
-   or change at least 10% of the items, so small edits cannot be used to probe.
+1. We give the coordinator one dataset version of at least 1,000 items.
+2. The coordinator answers with one number: how many items overlap a sealed set.
+3. If the number is 0, we may use that version. If it is above 0, we discard the whole
+   version (we do not learn which items) and make a new one with new seeds, or drop
+   that source, and ask again.
+4. At most 3 checks per planned release. So we can learn at most an overlap rate,
+   never which items overlap.
+
+Our programmatic examples are generated from parameters and templates, not from
+natural questions, so we expect the count to be 0; a non-zero count is itself a
+finding to report to the owner and the coordinator.
 
 ### 4.1 Task kinds
 
 | Kind | Input | Target | Source today |
 | --- | --- | --- | --- |
 | `author.solid` | learner question | scene with teaching steps | reference generator (4 components) |
-| `repair.solid` | question, refused scene, engine reason | a patch that the engine accepts | next: rule-based fixers on the generator's rejects (for example `component.check.spacing` → choose a planet count that divides 2 × (sun + planet)), plus deliberate mutations of valid scenes (drop a required key, unknown key, bad reference) with the inverse patch; every patch re-checked by the engine |
+| `repair.solid` | question, refused scene, engine reason | v0.1: the full corrected scene; v0.2: a patch that the engine accepts | next: rule-based fixers on the generator's rejects (for example `component.check.spacing` → choose a planet count that divides 2 × (sun + planet)), plus deliberate mutations of valid scenes (drop a required key, unknown key, bad reference) with the inverse fix; every target re-checked by the engine |
 | `refuse.scope` | out-of-scope question | a short "not supported" answer that names what is missing | next: human-written templates (Q1) |
 | `compose.solid` | question needing 2+ components | scene with `set`, `parent`, compound trains | later |
 
