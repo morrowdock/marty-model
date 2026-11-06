@@ -50,6 +50,14 @@ class TextHelpers(unittest.TestCase):
         self.assertEqual(g.num_text(Fraction(1, 20)), "0.05")
         with self.assertRaises(ValueError):
             g.num_text(Fraction(1, 3))
+        with self.assertRaises(ValueError):
+            g.num_text(0.1)  # a binary float, not 1/10
+
+    def test_nan_ratio_is_a_mismatch(self):
+        self.assertEqual(g.ratio_mismatch({"a": Fraction(1)}, {"a": float("nan")}), "a")
+        self.assertEqual(g.ratio_mismatch({"a": Fraction(1)}, {"a": True}), "a")
+        self.assertEqual(g.ratio_mismatch({"a": Fraction(1)}, []), "ratios")
+        self.assertIsNone(g.ratio_mismatch({"a": Fraction(1, 3)}, {"a": 1 / 3}))
 
     def test_every_centre_distance_is_exact(self):
         for m in (1, 1.5, 2, 2.5, 3):
@@ -150,7 +158,8 @@ class Generate(unittest.TestCase):
 
 
 def wrapper(folder, mode="ok"):
-    """An executable stand-in for the marty-solid binary, for CLI tests."""
+    """An executable stand-in for the marty-solid binary, for CLI tests (POSIX sh;
+    needs a temp folder that allows running files)."""
     path = os.path.join(folder, "marty-solid")
     with open(path, "w") as f:
         f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --mode={mode} "$@"\n')
