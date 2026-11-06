@@ -163,7 +163,8 @@ held-out sets and runs them with its harness (fresh model per question, public d
 only, at most 3 repairs, everything recorded). This project never sees those
 questions or answers. We get only total scores and the receipts' hashes, never
 per-item results. **One sealed run per release candidate, and at most three release
-candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** blind, as [DATA.md](DATA.md) §4 describes: the
+candidates per sealed-set version**, so we cannot tune against the sealed sets.
+**Overlap check:** blind, as [DATA.md](DATA.md) §4 describes: the
 coordinator returns only the number of overlapping distinct items in a dataset
 version (at least 1,000 items, fixed and hashed before the check, never built from an
 earlier count), never items or a filtered file; if it is above 0 we discard the whole

@@ -22,8 +22,8 @@ instead of being decided here.
 5. **No personal data, no private course content, no credentials.**
 6. **No evaluation leakage.** We never read the sealed evaluation sets. Before a
    dataset is used, the MartyGraphics coordinator checks it for overlap with them
-   using the blind procedure in [§4](#4-pipeline) (we learn only a total, never which
-   items).
+   using the blind procedure in [§4](#4-pipeline): we learn only a count over a set
+   fixed in advance, not which items overlap.
 
 ## 2. Questions for the owner
 
@@ -165,7 +165,9 @@ items, only a count:
    names (for example exact text, or a near-duplicate threshold) and answers with that
    one number.
 4. If the number is 0, we may use that version. If it is above 0, we discard the whole
-   version and make a new one with new seeds (rule 2), or drop that source.
+   version and make a new one with new seeds for the whole version (rule 2), with the
+   same source list. Dropping a source is a new plan decided without counts, recorded
+   before any further check.
 5. **At most 3 checks per sealed-set version**, over all releases.
 
 With these rules each answer is a count over a set fixed in advance, so it gives an
