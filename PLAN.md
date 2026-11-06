@@ -24,7 +24,7 @@ It does **not** need broad world knowledge, long reasoning or long context. That
 why a small model can be enough.
 
 **Typical sizes.** Measured: a component scene with 4 to 6 steps from the reference
-generator (next PR; engine 76104dea) is 670 to 960 bytes; the component catalog is
+[generator](pipeline/README.md) (engine 76104dea) is 670 to 960 bytes; the component catalog is
 about 3.8 KB; a hand-written full scene is 3.7 KB (53 lines). Estimated (no tokenizer
 run yet, about 3 bytes per token for JSON): a scene is about 250 to 350 output tokens
 and the catalog about 1,200 tokens, which can sit in a cached prompt prefix. Stage 1
@@ -215,7 +215,7 @@ training.
 
 | Release | Contents | Gate |
 | --- | --- | --- |
-| v0.0 (now) | plan; data rules and reference generator (next PRs) | reviewed PRs |
+| v0.0 (now) | plan, data rules, reference generator | reviewed PRs |
 | v0.1 research preview | LoRA adapter + fused 4-bit MLX file, model card, data card, training config, all hashes | the coordinator's sealed run meets every quality target in §7; latency and memory are measured by us on the dev split on named Macs (M1 and one newer chip) and meet the §3 Mac budgets; owner approves publishing |
 | v0.2 | adds repair-by-patch training, more components | same, plus §3 iPad budgets measured on a named iPad |
 | v1.0 | default on-device backend in Marty | learner study and owner decision |

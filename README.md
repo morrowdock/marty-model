@@ -5,8 +5,8 @@ A plan for a small, fast, open model that writes **checked**
 learning questions. It must be cheap enough to run on an iPad or a Mac.
 
 **Status: planning.** This repository has no model weights, no training runs and no
-training data yet. It holds the plan, the data rules, the project rules and the card
-templates. A small reference data generator follows in the next pull request.
+training data yet. It holds the plan, the data rules, the project rules, the card
+templates and a small reference data generator.
 
 ## Why a small model can be enough
 
@@ -34,6 +34,7 @@ wear, and it does not check that an explanation is true. So we also measure fact
 | --- | --- |
 | [PLAN.md](PLAN.md) | Model size, base models and licences, fine-tuning, device budgets, evaluation, safety, release plan, costs and the recommended path |
 | [DATA.md](DATA.md) | Data rules, owner questions on data rights, sources and provider terms, the pipeline, provenance schema |
+| [pipeline/README.md](pipeline/README.md) | Reference generator: engine-checked examples from the built-in components (no model calls) |
 | [docs/templates/MODEL-CARD.md](docs/templates/MODEL-CARD.md) | Template for each released model |
 | [docs/templates/DATA-CARD.md](docs/templates/DATA-CARD.md) | Template for each released dataset |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute (DCO sign-off, data rules) |
