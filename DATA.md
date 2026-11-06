@@ -166,8 +166,8 @@ items, only a count:
    one number.
 4. If the number is 0, we may use that version. If it is above 0, we discard the whole
    version and make a new one with new seeds for the whole version (rule 2), with the
-   same source list. Dropping a source is a new plan decided without counts, recorded
-   before any further check.
+   same source list. We never drop or add a source after a count. If all 3 checks
+   (rule 5) return above 0, we stop and report to the owner and the coordinator.
 5. **At most 3 checks per sealed-set version**, over all releases.
 
 With these rules each answer is a count over a set fixed in advance, so it gives an
