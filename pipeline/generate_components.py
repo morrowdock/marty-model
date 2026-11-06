@@ -105,8 +105,9 @@ def frac_text(f):
 def num_text(x):
     """An EXACT decimal without trailing zeros: 48, 1.5, 248.75.
 
-    Refuses values with no finite decimal form (for example 1/3), so a rounded
-    number is never presented as exact.
+    Refuses values with no short finite decimal form (for example 1/3), so a rounded
+    number is never presented as exact. Pass a Fraction or an int; a float such as
+    0.1 is a binary fraction and is refused (use Fraction(str(x))).
     """
     x = Fraction(x)
     scaled, places = x, 0
@@ -118,7 +119,8 @@ def num_text(x):
     sign = "-" if scaled < 0 else ""
     digits = str(abs(scaled.numerator)).rjust(places + 1, "0")
     text = digits if places == 0 else f"{digits[:-places]}.{digits[-places:]}"
-    assert Fraction(sign + text) == x
+    if Fraction(sign + text) != x:  # not an assert: `python -O` must not remove it
+        raise ValueError(f"num_text({x}) produced {sign + text}")
     return sign + text
 
 
@@ -311,7 +313,8 @@ def ratio_mismatch(expected, solved):
         return "ratios"
     for part, want in sorted(expected.items()):
         got = solved.get(part)
-        if isinstance(got, bool) or not isinstance(got, (int, float)) or abs(float(want) - got) > RATIO_TOLERANCE:
+        # `not (... <= tol)` also rejects NaN.
+        if isinstance(got, bool) or not isinstance(got, (int, float)) or not abs(float(want) - got) <= RATIO_TOLERANCE:
             return part
     return None
 

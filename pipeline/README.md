@@ -14,8 +14,9 @@ templates and this script were written by an AI agent, recorded in each example 
    `planetaryStage`, `sliderCrank`, `propeller`) from a seeded random generator.
 2. Writes a learner question, a title and teaching steps from fixed templates. Every
    number in the text comes from the parameters by exact arithmetic (fractions and
-   exact decimals, never rounded), and the last step says what the engine checked and
-   what it did not model.
+   exact decimals). The one rounded number is a speed factor's decimal, always written
+   after the exact fraction and marked "≈" (for example `18/7 ≈ 2.571`). The last step
+   says what the engine checked and what it did not model.
 3. Runs `marty-solid check` on the scene.
 4. Keeps the example only when the engine accepts it **and** each ratio that the text
    states equals the ratio the engine solved (within 1e-9). Otherwise the scene goes
@@ -27,7 +28,8 @@ engine-solved and compared (`check.engineVerified`). Other stated numbers (centr
 distance, ring teeth, speed factor, stroke, blade angles) are exact arithmetic on the
 parameters; the engine does not report them, so each example lists them in
 `check.derived`. For the slider-crank and the propeller only the input drive is
-engine-solved.
+engine-solved. `generator.dirty` is true when the script file differs from the git
+commit; the script's SHA-256 is recorded either way.
 
 Same arguments and seed give the same bytes. Output files are never overwritten.
 
