@@ -123,7 +123,8 @@ Starting settings, to be tuned on our development split: rank 16, alpha 32, all
 attention and MLP projections, 2 to 3 epochs, learning rate 1e-4 with cosine decay,
 loss on the answer tokens only. **Sequence length:** a repair example holds the prefix
 (about 1,200 tokens if the catalog is included), the question, the refused scene, the
-reason and the corrected scene (v0.1) or patch (v0.2), so 2,048 tokens is tight. We choose between (a) training without
+reason and the corrected scene (v0.1) or patch (v0.2), so 2,048 tokens is
+tight. We choose between (a) training without
 the catalog in each example, so the model learns the catalog, and (b) 4,096 tokens
 with the catalog, at about twice the cost. Stage 1 measures both.
 
@@ -163,9 +164,10 @@ only, at most 3 repairs, everything recorded). This project never sees those
 questions or answers. We get only total scores and the receipts' hashes, never
 per-item results. **One sealed run per release candidate, and at most three release
 candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** blind, as [DATA.md](DATA.md) §4 describes: the
-coordinator returns only the number of overlapping items in a dataset version (at
-least 1,000 items), never items or a filtered file; if it is above 0 we discard the
-whole version; at most 3 checks per planned release. A per-item answer would let us
+coordinator returns only the number of overlapping distinct items in a dataset
+version (at least 1,000 items, fixed and hashed before the check, never built from an
+earlier count), never items or a filtered file; if it is above 0 we discard the whole
+version; at most 3 checks per sealed-set version. A per-item answer would let us
 rebuild the sealed sets, so we do not ask for one.
 
 **Metrics** (the same as the coordinator's existing Prompt→3D runs, so results compare):

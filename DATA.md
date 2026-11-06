@@ -144,7 +144,7 @@ the Stage 1 approval in PLAN.md (download and install).
 | Engine check | `marty-solid check` (`--strict` when available), pinned engine commit and checker SHA-256 | rejects file with the stable reason (repair material) |
 | Number check | each stated ratio equals the engine's solved ratio within 1e-9 | `generator.ratioMismatch` (a generator bug: fix the template) |
 | Dedupe | exact: SHA-256 of the scene; near: same component and parameter bucket | dropped |
-| Overlap check | blind procedure below | removed by the coordinator |
+| Overlap check | blind procedure below (count only) | a non-zero count discards the whole version |
 | Scans | personal-data patterns; Gitleaks on the dataset files | dropped, and the source investigated |
 | Split | train / development by seed, plus one held-out parameter range and one held-out component in development | — |
 | Data card | [template](docs/templates/DATA-CARD.md), every file hashed | — |
@@ -155,13 +155,23 @@ would show which items are in the sealed sets: our generator is deterministic, s
 could always rebuild the file we sent and compare. So the coordinator never returns
 items, only a count:
 
-1. We give the coordinator one dataset version of at least 1,000 items.
-2. The coordinator answers with one number: how many items overlap a sealed set.
-3. If the number is 0, we may use that version. If it is above 0, we discard the whole
-   version (we do not learn which items) and make a new one with new seeds, or drop
-   that source, and ask again.
-4. At most 3 checks per planned release. So we can learn at most an overlap rate,
-   never which items overlap.
+1. **Fixed before the check.** A version is the full intended training set, made from
+   seeds and sources recorded in a commit before its first check. We commit its
+   SHA-256 before we send it.
+2. **Not adaptive.** No version is built from an earlier count. A retry changes the
+   seeds of the whole version; it never adds, removes or repeats chosen items.
+3. We give the coordinator the version (at least 1,000 distinct items). The
+   coordinator counts **distinct** items that overlap a sealed set under a match rule it
+   names (for example exact text, or a near-duplicate threshold) and answers with that
+   one number.
+4. If the number is 0, we may use that version. If it is above 0, we discard the whole
+   version and make a new one with new seeds (rule 2), or drop that source.
+5. **At most 3 checks per sealed-set version**, over all releases.
+
+With these rules each answer is a count over a set fixed in advance, so it gives an
+overlap rate and cannot be used to test chosen items. A count still carries a little
+information (at most about 14 bits per check for 20,000 items, about 43 bits per
+sealed-set version); the coordinator may refuse a check that breaks a rule.
 
 Our programmatic examples are generated from parameters and templates, not from
 natural questions, so we expect the count to be 0; a non-zero count is itself a
