@@ -21,8 +21,9 @@ instead of being decided here.
 4. **Provenance on every example** ([§5](#5-provenance-schema)).
 5. **No personal data, no private course content, no credentials.**
 6. **No evaluation leakage.** We never read the sealed evaluation sets. Before a
-   dataset is used, the MartyGraphics coordinator checks it for overlap with them,
-   removes overlapping items on its side and tells us only the total removed.
+   dataset is used, the MartyGraphics coordinator checks it for overlap with them
+   using the blind procedure in [§4](#4-pipeline) (we learn only a total, never which
+   items).
 
 ## 2. Questions for the owner
 
@@ -33,10 +34,16 @@ generated data carries `"clearance": "pending-owner"` and is not used for traini
 Most MartyGraphics commits carry `Co-Authored-By: Claude Opus 5.5` (16 of the 23
 commits on main at 76104dea), and this repository, including the generator and its
 sentence templates, is written by a Claude agent. Anthropic's terms
-([§3.1](#31-hosted-ai-providers)) prohibit using Claude outputs to develop or train AI
-models (the Usage Policy adds "without prior authorization from Anthropic"). Our
-reading: the template sentences that appear in training text are Claude outputs. It is
-less clear whether scenes that a Claude-written *program* computes count as outputs.
+([§3.1](#31-hosted-ai-providers)) **may** prohibit training an AI model on this text.
+The Usage Policy page says "Use outputs to train an AI model … without prior
+authorization from Anthropic" is not allowed, but that page shows an effective date of
+2026-11-12, after we read it. The Consumer Terms §3 forbid using the Services to
+develop competing products, "including to develop or train any artificial intelligence
+or machine learning algorithms or models"; whether that covers a small, non-competing
+model is a question for the owner. Our working assumption, until the owner decides:
+the template sentences that appear in training text are Claude outputs and are
+covered. It is less clear whether scenes that a Claude-written *program* computes
+count as outputs.
 **Options:**
 (a) ask Anthropic for written authorisation for this use;
 (b) the owner (a person) writes or rewrites the sentence templates and question
@@ -51,7 +58,9 @@ so (b) costs the owner about an hour.
 **Q2. Which Anthropic terms apply to our account?** Which agreement covers the Claude
 sessions used so far: a consumer plan (the Consumer Terms name Claude.ai and Claude
 Pro; they do not name Max or Claude Code on the page) or the API under the Commercial
-Terms (which bar only *competing* models)? The Usage Policy applies to both.
+Terms (§D.4: no competing products or training competing AI models, no reverse
+engineering or duplicating the Services, no support for a third party doing so,
+"except as expressly approved by Anthropic")? The Usage Policy applies to both.
 
 **Q3. OpenAI terms.** Some work across these projects used an OpenAI model through
 Codex. openai.com refused our automated fetches (HTTP
@@ -73,7 +82,7 @@ approves each public dataset release.
 | --- | --- | --- | --- |
 | A | Programmatic generation from the engine and its built-in components | **preferred**; reference generator exists; text templates wait on Q1 | §4 |
 | B | Human-authored examples (a named person, DCO sign-off) | allowed | the owner or contributors; each file marked human-authored |
-| B' | Agent-authored examples in the MartyGraphics repo | **excluded** until Q1 (Claude) and Q3 (OpenAI) are decided | Apache-2.0 on the repo does not remove the account holder's obligations to the provider; see §3.1 |
+| B' | Agent-authored examples in the MartyGraphics repo | **excluded** until Q1 (Claude) and Q3 (OpenAI) are decided | we assume, until the owner decides, that the Apache-2.0 licence on the repo does not remove the account holder's obligations to the provider; see §3.1 |
 | C | Outputs of open-weight models with permissive licences | allowed after Stage 1 approval (needs a local model download) | §3.3 |
 | C' | Outputs of hosted APIs whose terms allow training | possible, needs owner approval (paid API, credentials, data leaves the machine) | DeepSeek explicitly allows it; §3.1 |
 | D | Learner corrections | later, with consent | Q4 |
@@ -86,22 +95,22 @@ on them.
 
 | Provider | Document (date shown) | Clause | Our plain reading |
 | --- | --- | --- | --- |
-| Anthropic | [Consumer Terms](https://www.anthropic.com/legal/consumer-terms) (effective 2025-10-08), §3 | may not use the Services "to develop any products or services that compete with our Services, including to develop or train any artificial intelligence or machine learning algorithms or models" | training any AI model on outputs is prohibited under the consumer agreement |
-| Anthropic | [Usage Policy](https://www.anthropic.com/legal/aup) (page shows effective 2026-11-12, six days after we read it; the version in force today was not checked) | "Use outputs to train an AI model (e.g., "model scraping" or "model distillation") without prior authorization from Anthropic" | prohibited unless Anthropic authorises it; applies to all Anthropic services |
-| Anthropic | [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) (effective 2025-06-17), §D.4 | may not "build a competing product or service, including to train competing AI models" | bars competing models; the Usage Policy still applies |
+| Anthropic | [Consumer Terms](https://www.anthropic.com/legal/consumer-terms) (effective 2025-10-08), §3 | "You may not access or use, or help another person to access or use, our Services" … "To develop any products or services that compete with our Services, including to develop or train any artificial intelligence or machine learning algorithms or models" | about competing use of the Services; the text does not say "outputs"; whether it covers our model is Q1 |
+| Anthropic | [Usage Policy](https://www.anthropic.com/legal/aup) (page shows effective 2026-11-12, six days after we read it; the version in force today was not checked) | "Use outputs to train an AI model (e.g., "model scraping" or "model distillation") without prior authorization from Anthropic" | the clearest clause on outputs: not allowed unless Anthropic authorises it; applies to all Anthropic services once in force |
+| Anthropic | [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) (effective 2025-06-17), §D.4 | may not "(a) access the Services to build a competing product or service, including to train competing AI models … (b) reverse engineer or duplicate the Services; or (c) support any third party's attempt", "except as expressly approved by Anthropic" | bars competing models; Anthropic can approve exceptions; the Usage Policy still applies |
 | Anthropic | Consumer §4, Commercial §B | Anthropic assigns its rights in Outputs, "if any", to the user | ownership of outputs does not remove the use restrictions |
 | OpenAI | [Terms of Use](https://openai.com/policies/terms-of-use/), [Business Terms](https://openai.com/policies/business-terms/) | **UNVERIFIED**: every fetch returned HTTP 403 | Q3 |
-| Google | [Gemini API Additional Terms](https://ai.google.dev/gemini-api/terms) (effective 2026-03-23) | "You may not use the Services to develop models that compete with the Services"; you are responsible for "the use of that content by anyone you share it with" | bars competing models; we do not use Gemini outputs |
-| Mistral | [Commercial Terms](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective 2026-09-25) | the training restriction covers image outputs; no reverse engineering of Mistral products from Output | text outputs not restricted for training; not used today |
-| DeepSeek | [Open Platform Terms](https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html) (effective 2026-04-29), §4.2 | permitted uses include "training other models (such as model distillation)" | explicitly allowed; needs owner approval as a paid API |
+| Google | [Gemini API Additional Terms](https://aistudio.google.com/docs/terms) (effective 2026-03-23; the old ai.google.dev URL redirects here) | "You may not use the Services to develop models that compete with the Services"; you are responsible for "the use of that content by anyone you share it with" | bars competing models; we do not use Gemini outputs |
+| Mistral | [Commercial Terms](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective 2026-09-25), §3.3, §2.2(e) | §3.3: "Customer may not use image Outputs to develop or train any image generation product that competes with a Mistral AI Product"; §2.2(e): no use of Output to reverse engineer Mistral products; §2.2 (last paragraph): pass equivalent restrictions to end users | we found no clause on training with text outputs; not used today |
+| DeepSeek | [Open Platform Terms](https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html) (effective 2026-04-29), §4.2 | "Subject to your compliance to applicable law and our Terms", permitted uses include "training other models (such as model distillation)" | explicitly allowed, with conditions; needs owner approval as a paid API |
 
-**Downstream readers.** None of these documents claims to bind a person who is not a
-party to the agreement. They bind the account holder (Anthropic: "help another person
-to access or use"; Google: responsibility for "anyone you share it with"; Mistral:
-pass restrictions on to end users). Because the owner's own account produced the
-agent-written MartyGraphics text, publishing it under Apache-2.0 does not free *us*
-from these terms. A third party's position may differ; that is not our question to
-decide.
+**Downstream readers.** None of the documents we read claims to bind a person who is
+not a party to the agreement. They bind the account holder (Anthropic: "help another
+person to access or use"; Google: responsibility for "anyone you share it with";
+Mistral: pass restrictions on to end users). Because the owner's own account produced
+the agent-written MartyGraphics text, we assume, until the owner decides, that
+publishing it under Apache-2.0 does not free *us* from these terms. A third party's
+position may differ; that is not our question to decide.
 
 ### 3.2 Built-in components and worked examples
 
@@ -124,8 +133,8 @@ the Stage 1 approval in PLAN.md (download and install).
 
 ```
  sources ──► normalise ──► engine check ──► number check ──► dedupe ──► overlap check ──► scans ──► split ──► data card ──► clearance
- (A,B,C)    (question,     (marty-solid     (stated ratios   (sha256 +   (coordinator     (PII,      (train /   (+ hashes)    (owner)
-            scene, steps)   check --strict)  = solved)        params)     removes; total)  Gitleaks)  dev)
+ (A,B,C)    (question,     (marty-solid     (stated ratios   (sha256 +   (coordinator,    (PII,      (train /   (+ hashes)    (owner)
+            scene, steps)   check --strict)  = solved)        params)     blind; total)    Gitleaks)  dev)
 ```
 
 | Step | What | Rejects go to |
@@ -134,11 +143,24 @@ the Stage 1 approval in PLAN.md (download and install).
 | Engine check | `marty-solid check` (`--strict` when available), pinned engine commit and checker SHA-256 | rejects file with the stable reason (repair material) |
 | Number check | each stated ratio equals the engine's solved ratio within 1e-9 | `generator.ratioMismatch` (a generator bug: fix the template) |
 | Dedupe | exact: SHA-256 of the scene; near: same component and parameter bucket | dropped |
-| Overlap check | we give the coordinator the dataset version; it removes items that overlap the sealed sets on its side and reports only the total removed, once per version (a per-item answer would leak the sealed sets) | removed by the coordinator |
+| Overlap check | blind procedure below | removed by the coordinator |
 | Scans | personal-data patterns; Gitleaks on the dataset files | dropped, and the source investigated |
 | Split | train / development by seed, plus one held-out parameter range and one held-out component in development | — |
 | Data card | [template](docs/templates/DATA-CARD.md), every file hashed | — |
 | Clearance | owner sets `clearance` to `cleared` for a dataset version | — |
+
+**Blind overlap check.** A per-item answer, or a filtered file that we compare with our
+own copy, would show which items are in the sealed sets. So:
+
+1. We give the coordinator one dataset version.
+2. The coordinator removes every item that overlaps a sealed set **and** a random set of
+   other items (at least 2% of the dataset, chosen by the coordinator), and keeps the
+   seed private.
+3. The coordinator returns the filtered file and one number: the total removed.
+4. We train only on the returned file. We never compare it with the file we sent, and
+   we delete our pre-check copy of that version.
+5. At most one check per planned release. A new version for a later release must add
+   or change at least 10% of the items, so small edits cannot be used to probe.
 
 ### 4.1 Task kinds
 
@@ -149,12 +171,16 @@ the Stage 1 approval in PLAN.md (download and install).
 | `refuse.scope` | out-of-scope question | a short "not supported" answer that names what is missing | next: human-written templates (Q1) |
 | `compose.solid` | question needing 2+ components | scene with `set`, `parent`, compound trains | later |
 
-Target first mixture (to tune on development data): about 60% author, 25% repair,
-10% refusal, 5% compose, about 10,000 to 20,000 examples in total.
+Target first mixture for v0.1 (to tune on development data): about 70% author, 20%
+repair, 10% refusal; about 10,000 to 20,000 examples in total. In v0.1 a repair target
+is the full corrected scene. Repair by patch and compose examples come in v0.2, when the
+engine CLI can check a patch (requested from the coordinator), as in
+[PLAN.md](PLAN.md) §9.
 
 ### 4.2 Reference generator
 
-[`pipeline/generate_components.py`](pipeline/README.md) implements the A → engine check
+[`pipeline/generate_components.py`](pipeline/generate_components.py) (see
+[pipeline/README.md](pipeline/README.md)) implements the A → engine check
 → number check path for `author.solid` today, with tests. It calls no AI model.
 
 ## 5. Provenance schema
@@ -168,6 +194,7 @@ Every record carries `provenance`:
 | `licence` | licence of the example (Apache-2.0 unless stated) |
 | `clearance` | `pending-owner` or `cleared` (set only by the owner, per dataset version) |
 | `templateAuthor` | who wrote the sentence templates (for example `ai-agent:claude-opus-5-5` or `human.<handle>`); decides Q1 |
+| `component`, `with` | component id and parameter values (programmatic) |
 | `generator` | name, version, seed, script SHA-256, git commit and a dirty flag (programmatic) |
 | `model` | open-weight model id, revision hash, licence URL, sampling settings (open-weight only) |
 | `engine` | MartyGraphics commit and checker SHA-256 |

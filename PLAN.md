@@ -159,10 +159,11 @@ held-out sets and runs them with its harness (fresh model per question, public d
 only, at most 3 repairs, everything recorded). This project never sees those
 questions or answers. We get only total scores and the receipts' hashes, never
 per-item results. **One sealed run per release candidate, and at most three release
-candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** we give the coordinator a training dataset; the
-coordinator removes any overlapping items on its side and tells us only the total
-number removed, once per dataset version. A per-item yes/no answer would let us
-rebuild the sealed sets, so we do not ask for one.
+candidates per sealed-set version**, so we cannot tune against the sealed sets. **Overlap check:** blind, as [DATA.md](DATA.md) §4 describes: the
+coordinator removes overlapping items plus a random 2% of other items and tells us only
+the total; we train only on the returned file and never compare it with ours; at most
+one check per planned release. A per-item answer would let us rebuild the sealed sets,
+so we do not ask for one.
 
 **Metrics** (the same as the coordinator's existing Prompt→3D runs, so results compare):
 
@@ -217,7 +218,7 @@ training.
 | --- | --- | --- |
 | v0.0 (now) | plan, data rules, reference generator | reviewed PRs |
 | v0.1 research preview | LoRA adapter + fused 4-bit MLX file, model card, data card, training config, all hashes | the coordinator's sealed run meets every quality target in §7; latency and memory are measured by us on the dev split on named Macs (M1 and one newer chip) and meet the §3 Mac budgets; owner approves publishing |
-| v0.2 | adds repair-by-patch training, more components | same, plus §3 iPad budgets measured on a named iPad |
+| v0.2 | adds repair-by-patch and compose training, more components | same, plus §3 iPad budgets measured on a named iPad |
 | v1.0 | default on-device backend in Marty | learner study and owner decision |
 
 Weights go to a public model host only after owner approval: publishing weights cannot
