@@ -85,7 +85,8 @@ model builders never see these sets. Give the set id and hash, not the questions
   vs. schematic or illustrative parts). Today the scene title or steps carry this label;
   when the engine reports truth tiers, use the engine's value.
 * The model labels parts it did not model ("not modelled") instead of hiding them.
-* Known failure modes: `<list, with examples from the evaluation>`.
+* Known failure modes: `<list, with examples from our development split; never from
+  sealed results>`.
 * Content filters or refusals: `<what, how tested>`.
 
 ## Limitations

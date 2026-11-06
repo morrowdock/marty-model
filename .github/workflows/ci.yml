@@ -1,0 +1,98 @@
+name: optional hosted checks
+# Maintainers start this by hand (workflow_dispatch) for an exact PR head.
+# No automatic PR or fork jobs, no secrets, no caches. GitHub's free standard
+# runners only (public repository), never a larger paid runner.
+on:
+  workflow_dispatch:
+    inputs:
+      base_sha:
+        description: Full PR base commit SHA
+        required: true
+      head_sha:
+        description: Full actual PR head commit SHA (not the synthetic merge)
+        required: true
+      engine_sha:
+        description: Full MartyGraphics commit SHA to build marty-solid from
+        required: true
+        default: 76104deae44a186ccf29a43db9e091f088f12103
+permissions:
+  contents: read
+jobs:
+  python:
+    # Pure-Python checks: the generator against the fake engine, and the DCO check.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.head_sha }}
+      - env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          git diff --check "$BASE_SHA" "$HEAD_SHA"
+      - run: python3 --version
+      - run: python3 -m unittest discover -s tests -v
+      - env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: python3 tools/check_dco.py "$BASE_SHA" "$HEAD_SHA"
+  real-engine:
+    # Builds marty-solid from the public MartyGraphics repository at engine_sha and
+    # runs the real-engine generator test. The binary hash differs from local
+    # builds (other toolchain); the test records whatever binary it ran.
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.head_sha }}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: morrowdock/martygraphics
+          persist-credentials: false
+          ref: ${{ inputs.engine_sha }}
+          path: engine
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          swift --version
+          sw_vers
+      - name: Build marty-solid
+        shell: bash
+        env:
+          ENGINE_SHA: ${{ inputs.engine_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HEAD_SHA"
+          test "$(git -C engine rev-parse HEAD)" = "$ENGINE_SHA"
+          mkdir -p logs
+          swift build -c release --jobs 2 --package-path engine/Examples/Solid3D --product marty-solid 2>&1 | tee logs/build.log
+          bin="$(swift build -c release --package-path engine/Examples/Solid3D --show-bin-path)/marty-solid"
+          shasum -a 256 "$bin" | tee logs/marty-solid.sha256
+          echo "MARTY_SOLID=$bin" >> "$GITHUB_ENV"
+      - name: Real-engine tests
+        shell: bash
+        env:
+          MARTY_SOLID_COMMIT: ${{ inputs.engine_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -v 2>&1 | tee logs/tests.log
+          # Run the real-engine test by name: a missing (renamed) test is an error, and a
+          # skip (no MARTY_SOLID) is a failure here.
+          python3 -m unittest -v tests.test_generate_components.RealEngine.test_real_engine_accepts_every_emitted_scene \
+            2>&1 | tee logs/real-engine.log
+          if grep -q "skipped" logs/real-engine.log; then echo "real-engine test skipped" >&2; exit 1; fi
+          grep -qx "OK" logs/real-engine.log
+      - name: Upload logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: real-engine-logs
+          path: logs/
+          if-no-files-found: warn
