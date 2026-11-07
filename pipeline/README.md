@@ -40,8 +40,10 @@ The engine binary comes from MartyGraphics `Examples/Solid3D` (`swift build -c
 release`). The pipeline is pinned to MartyGraphics `d5f42c2` (public PR #30) and runs
 `check --strict` by default (`--no-strict` for an older checker). From `d5f42c2` every
 report carries `engine` (version, report format and `executableSHA256`); the scripts
-refuse a report whose `executableSHA256` is not the hash of the binary they ran
-(`engine.identity`) and record the identity in provenance. The engine does not know its
+refuse (`engine.identity`) a report whose `executableSHA256` is not the hash of the
+binary they ran, a report whose identity differs from the run's first one, and, in a
+strict run or after an identity was seen, a report without `engine`. They record the
+identity in provenance. The engine does not know its
 git commit, so `--engine-commit` still records it.
 
 ```sh

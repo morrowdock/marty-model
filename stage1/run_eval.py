@@ -100,7 +100,7 @@ def main(argv=None):
                       "peakMemoryGB": round(mx.get_peak_memory() / 1e9, 3)}
 
     engine = gc.Engine([a.engine], a.engine, strict=a.strict)
-    run = {"strict": a.strict,"model": os.path.abspath(a.model), "adapter": os.path.abspath(a.adapter) if a.adapter else None,
+    run = {"strict": a.strict, "model": os.path.abspath(a.model), "adapter": os.path.abspath(a.adapter) if a.adapter else None,
            "adapterSha256": file_sha(os.path.join(a.adapter, "adapters.safetensors")) if a.adapter else None,
            "mlx": mx.__version__, "mlxLm": mlx_lm.__version__, "engineCommit": a.engine_commit,
            "checkerSha256": engine.sha256, "loadSeconds": round(load_seconds, 2), "maxTokens": a.max_tokens,
@@ -110,7 +110,8 @@ def main(argv=None):
             for row, meta in items:
                 user = row["messages"][0]["content"]
                 result = harness.evaluate_item(meta, user, generate, engine.check, a.max_repairs)
-                out.write(json.dumps({**result, "run": run}, sort_keys=True) + "\n")
+                out.write(json.dumps({**result, "run": run, "engineIdentity": engine.identity},
+                                     sort_keys=True) + "\n")
                 out.flush()
     finally:
         engine.close()

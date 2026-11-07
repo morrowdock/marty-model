@@ -4,7 +4,7 @@
 It knows only the built-in component ids and the closed-form ratios the generator
 uses. It is NOT an engine: real checks come from the integration test.
 
-Usage: python3 fake_engine.py [--mode=ok|wrong|garbage|exit|sleep|accept|badid] check FILE.json [--strict]
+Usage: python3 fake_engine.py [--mode=ok|wrong|garbage|exit|sleep|accept|badid|nosha|noid] check FILE.json [--strict]
        python3 fake_engine.py components
 """
 
@@ -106,7 +106,7 @@ def main(argv):
     if argv == ["components"]:
         print(json.dumps(CATALOG))
         return 0
-    assert argv[0] == "check" and all(x == "--strict" for x in argv[2:]), argv
+    assert argv[0] == "check" and argv[2:] in ([], ["--strict"]), argv
     with open(argv[1], encoding="utf-8") as f:
         doc = json.load(f)
     reason, part = validate(doc)
@@ -123,8 +123,13 @@ def main(argv):
         own = hashlib.sha256(me.read()).hexdigest()
     identity = {"name": "MartyGraphics", "version": "fake", "reportFormat": 1,
                 "executableSHA256": "0" * 64 if mode == "badid" else own}
-    print(json.dumps({"ok": ok, "reason": reason, "part": part, "ratios": ratios, "parts": 2, "triangles": 100,
-                      "engine": identity}))
+    if mode == "nosha":
+        del identity["executableSHA256"]
+    result = {"ok": ok, "reason": reason, "part": part, "ratios": ratios, "parts": 2, "triangles": 100,
+              "engine": identity}
+    if mode == "noid":  # an older checker: no engine identity
+        del result["engine"]
+    print(json.dumps(result))
     if mode == "exit":
         return 0 if not ok else 1  # exit status disagrees with the report
     return 0 if ok else 1

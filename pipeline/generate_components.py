@@ -93,15 +93,21 @@ class Engine:
         # The exit status and the report must agree; anything else is an engine fault.
         if report["ok"] != (done.returncode == 0):
             return {**fault, "reason": "engine.exit"}
-        # Engines from d5f42c2 report who they are; the binary hash must be the one we hashed.
+        # Engines from d5f42c2 report who they are; the binary hash must be the one we hashed,
+        # and every report of a run must carry the same identity. A strict checker always
+        # reports it, so a strict run (or a run that has seen an identity) refuses a report
+        # without one.
         eng = report.get("engine")
-        if eng is not None:
-            if not isinstance(eng, dict) or eng.get("executableSHA256") != self.sha256:
+        if eng is None:
+            if self.strict or self.identity is not None:
                 return {**fault, "reason": "engine.identity"}
-            identity = {k: eng.get(k) for k in ("name", "version", "reportFormat", "executableSHA256")}
-            if self.identity is not None and identity != self.identity:
-                return {**fault, "reason": "engine.identity"}
-            self.identity = identity
+            return report
+        if not isinstance(eng, dict) or eng.get("executableSHA256") != self.sha256:
+            return {**fault, "reason": "engine.identity"}
+        identity = {k: eng.get(k) for k in ("name", "version", "reportFormat", "executableSHA256")}
+        if self.identity is not None and identity != self.identity:
+            return {**fault, "reason": "engine.identity"}
+        self.identity = identity
         return report
 
 

@@ -228,9 +228,10 @@ engine CLI can check a patch (requested from the coordinator), as in
 → number check path for `author.solid` today, with tests. It calls no AI model.
 
 **Engine report text.** From MartyGraphics `d5f42c2` the check report also holds
-sentences (`readBack`, `facts` text, `legend`). Those are written by the engine's own
-templates, which AI agents wrote, so they never go into training data. Training rows
-use only the report's identifiers (`reason`, `part`) and numbers.
+sentences (for example `readBack`, the `facts` and `legend` text, the `stepFacts` check
+text and `notChecked`). Those are written by the engine's own templates, which AI agents
+wrote, so they never go into training data: training rows use no report string except
+`reason` and `part`, plus numbers.
 
 ## 5. Provenance schema
 

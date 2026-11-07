@@ -149,6 +149,41 @@ class Generate(unittest.TestCase):
         self.assertEqual(examples, [])
         self.assertEqual({r["reason"] for r in rejects}, {"engine.identity"})
 
+    def test_identity_gaps_are_refused(self):
+        for mode, strict, reason in (("nosha", True, "engine.identity"), ("noid", True, "engine.identity")):
+            e = g.Engine([sys.executable, FAKE, f"--mode={mode}"], FAKE, strict=strict)
+            try:
+                self.assertEqual(e.check(g.scene_document("spurPair", "gears", {"pinionTeeth": 12, "wheelTeeth": 36,
+                                 "module": 2, "width": 10}, g.spur_pair_text(__import__("random").Random(1), "gears",
+                                 {"pinionTeeth": 12, "wheelTeeth": 36, "module": 2, "width": 10})))["reason"], reason)
+            finally:
+                e.close()
+
+    def test_old_checker_without_identity_is_accepted_only_when_not_strict(self):
+        e = g.Engine([sys.executable, FAKE, "--mode=noid"], FAKE, strict=False)
+        doc = g.scene_document("spurPair", "gears", {"pinionTeeth": 12, "wheelTeeth": 36, "module": 2, "width": 10},
+                               g.spur_pair_text(__import__("random").Random(1), "gears",
+                                                {"pinionTeeth": 12, "wheelTeeth": 36, "module": 2, "width": 10}))
+        try:
+            self.assertTrue(e.check(doc)["ok"])
+            self.assertIsNone(e.identity)
+            e.identity = {"name": "MartyGraphics"}  # once an identity was seen, a report without one is refused
+            self.assertEqual(e.check(doc)["reason"], "engine.identity")
+        finally:
+            e.close()
+
+    def test_changed_identity_within_a_run_is_refused(self):
+        e = g.Engine([sys.executable, FAKE, "--mode=ok"], FAKE)
+        doc = g.scene_document("spurPair", "gears", {"pinionTeeth": 12, "wheelTeeth": 36, "module": 2, "width": 10},
+                               g.spur_pair_text(__import__("random").Random(1), "gears",
+                                                {"pinionTeeth": 12, "wheelTeeth": 36, "module": 2, "width": 10}))
+        try:
+            self.assertTrue(e.check(doc)["ok"])
+            e.identity = dict(e.identity, version="other")
+            self.assertEqual(e.check(doc)["reason"], "engine.identity")
+        finally:
+            e.close()
+
     def test_identity_and_strict_are_recorded(self):
         examples, _ = run(fake(), count=2, components=["spurPair"])
         eng = examples[0]["provenance"]["engine"]
@@ -244,6 +279,12 @@ class RealEngine(unittest.TestCase):
             with open(rej, encoding="utf-8") as f:
                 rejects = [json.loads(line) for line in f]
         self.assertEqual(len(examples), 24)
+        # The real binary's reported executableSHA256 equals the hash of the file we ran.
+        for e in examples:
+            ident = e["provenance"]["engine"]["identity"]
+            self.assertIsNotNone(ident)
+            self.assertEqual(ident["executableSHA256"], e["provenance"]["engine"]["checkerSha256"])
+        self.assertNotIn("engine.identity", {r["reason"] for r in rejects})
         self.assertEqual({e["provenance"]["component"] for e in examples}, set(ALL))
         # Rejects are engine refusals with stable reasons, never generator text/ratio bugs.
         for r in rejects:
