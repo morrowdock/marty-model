@@ -22,7 +22,7 @@ train / valid / dev, plus a parallel `*.meta.jsonl` with provenance and the fiel
 evaluator needs. Same arguments give the same bytes.
 
 Usage:
-  python3 stage1/make_data.py --engine PATH/marty-solid --engine-commit 76104dea \\
+  python3 stage1/make_data.py --engine PATH/marty-solid --engine-commit d5f42c2e6124487d53f046171526d26d2128330d \\
       --out-dir DIR --seed 1 [--train 1300] [--valid 100] [--dev 100] [--created YYYY-MM-DD]
 """
 
@@ -156,7 +156,8 @@ def build(engine, catalog, n, seed, split, created, engine_commit, generator, se
                            "licence": "Apache-2.0", "clearance": "cleared-stage1-local",
                            "clearanceReason": "owner approval 2026-11-07: local Stage 1 comparison only, not for release",
                            "generator": {"name": NAME, "version": VERSION, "seed": seed, **(generator or {})},
-                           "engine": {"commit": engine_commit, "checkerSha256": engine.sha256},
+                           "engine": {"commit": engine_commit, "checkerSha256": engine.sha256,
+                                      "identity": engine.identity, "strict": engine.strict},
                            "created": created, "sceneSha256": sha(target_scene)},
         })
     if len(rows) < n:
@@ -180,6 +181,8 @@ def main(argv=None):
     ap.add_argument("--valid", type=int, default=100)
     ap.add_argument("--dev", type=int, default=100)
     ap.add_argument("--created", default=datetime.datetime.now(datetime.timezone.utc).date().isoformat())
+    ap.add_argument("--no-strict", dest="strict", action="store_false",
+                    help="plain `check` (for a checker older than MartyGraphics d5f42c2)")
     a = ap.parse_args(argv)
     if not re.fullmatch(r"[0-9a-f]{7,40}", a.engine_commit):
         ap.error("--engine-commit must be 7-40 lowercase hex characters")
@@ -190,9 +193,10 @@ def main(argv=None):
         ap.error(f"{a.out_dir} is not empty; refusing to overwrite")
     os.makedirs(a.out_dir, exist_ok=True)
 
-    engine = gc.Engine([a.engine], a.engine)
+    engine = gc.Engine([a.engine], a.engine, strict=a.strict)
     seen, seen_users = set(), set()
-    summary = {"engineCommit": a.engine_commit, "checkerSha256": engine.sha256, "seed": a.seed, "files": {}}
+    summary = {"engineCommit": a.engine_commit, "checkerSha256": engine.sha256, "strict": a.strict, "seed": a.seed,
+               "files": {}}
     try:
         catalog = gr.load_catalog(engine)
         ident = gc.generator_identity(__file__)
@@ -211,6 +215,7 @@ def main(argv=None):
             summary[split] = counts
     finally:
         engine.close()
+    summary["engineIdentity"] = engine.identity
     with open(os.path.join(a.out_dir, "SUMMARY.json"), "x", encoding="utf-8") as f:
         json.dump(summary, f, indent=1, sort_keys=True)
     print(json.dumps(summary, sort_keys=True), file=sys.stderr)

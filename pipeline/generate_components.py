@@ -13,7 +13,7 @@ Standard library only. Same arguments and seed give the same output bytes.
 
 Usage:
   python3 pipeline/generate_components.py --engine PATH/marty-solid \\
-      --engine-commit 76104dea --count 40 --seed 1 --out examples.jsonl \\
+      --engine-commit d5f42c2e6124487d53f046171526d26d2128330d --count 40 --seed 1 --out examples.jsonl \\
       [--rejects rejects.jsonl] [--components spurPair,planetaryStage] \\
       [--created YYYY-MM-DD]
 
@@ -58,13 +58,14 @@ class Engine:
     path); `binary` is the file whose SHA-256 goes into provenance.
     """
 
-    # The checker at MartyGraphics 76104dea accepts exactly `check FILE`. When the
-    # engine gains `check --strict`, add it here and record it in COMMAND.
-    COMMAND = "marty-solid check"
-
-    def __init__(self, cmd, binary, timeout=60):
+    def __init__(self, cmd, binary, timeout=60, strict=True):
+        # strict: `check --strict` (MartyGraphics d5f42c2 and later; the default for model
+        # harnesses). Pass strict=False for an older checker without the flag.
         self.cmd = list(cmd)
         self.timeout = timeout
+        self.strict = strict
+        self.COMMAND = "marty-solid check" + (" --strict" if strict else "")
+        self.identity = None  # the engine's own `engine` object, from its first report
         with open(binary, "rb") as f:
             self.sha256 = hashlib.sha256(f.read()).hexdigest()
         self._dir = tempfile.TemporaryDirectory(prefix="marty-gen-")
@@ -76,7 +77,7 @@ class Engine:
         path = os.path.join(self._dir.name, "scene.json")
         with open(path, "w", encoding="utf-8") as f:
             f.write(scene_text)
-        args = self.cmd + ["check", path]
+        args = self.cmd + ["check", path] + (["--strict"] if self.strict else [])
         try:
             done = subprocess.run(args, capture_output=True, timeout=self.timeout, check=False)
         except subprocess.TimeoutExpired:
@@ -92,6 +93,15 @@ class Engine:
         # The exit status and the report must agree; anything else is an engine fault.
         if report["ok"] != (done.returncode == 0):
             return {**fault, "reason": "engine.exit"}
+        # Engines from d5f42c2 report who they are; the binary hash must be the one we hashed.
+        eng = report.get("engine")
+        if eng is not None:
+            if not isinstance(eng, dict) or eng.get("executableSHA256") != self.sha256:
+                return {**fault, "reason": "engine.identity"}
+            identity = {k: eng.get(k) for k in ("name", "version", "reportFormat", "executableSHA256")}
+            if self.identity is not None and identity != self.identity:
+                return {**fault, "reason": "engine.identity"}
+            self.identity = identity
         return report
 
 
@@ -370,7 +380,8 @@ def generate(engine, count, seed, components, created, engine_commit, generator=
                 "component": component,
                 "with": values,
                 "generator": {"name": NAME, "version": VERSION, "seed": seed, **(generator or {})},
-                "engine": {"commit": engine_commit, "checkerSha256": engine.sha256},
+                "engine": {"commit": engine_commit, "checkerSha256": engine.sha256,
+                           "identity": engine.identity, "strict": engine.strict},
                 "created": created,
                 "sceneSha256": base["sceneSha256"],
             },
@@ -419,6 +430,8 @@ def main(argv=None):
     ap.add_argument("--out", required=True, help="new JSON Lines file (must not exist)")
     ap.add_argument("--rejects", help="new JSON Lines file for refused scenes (must not exist)")
     ap.add_argument("--components", default=",".join(RECIPES), help="comma-separated component ids")
+    ap.add_argument("--no-strict", dest="strict", action="store_false",
+                    help="plain `check` (for a checker older than MartyGraphics d5f42c2)")
     ap.add_argument("--created", default=datetime.datetime.now(datetime.timezone.utc).date().isoformat())
     a = ap.parse_args(argv)
     if not re.fullmatch(r"[0-9a-f]{7,40}", a.engine_commit):
@@ -443,7 +456,7 @@ def main(argv=None):
         if not os.path.isdir(os.path.dirname(os.path.abspath(path))):
             ap.error(f"folder for {path} does not exist")
 
-    engine = Engine([a.engine], a.engine)
+    engine = Engine([a.engine], a.engine, strict=a.strict)
     try:
         examples, rejects = generate(engine, a.count, a.seed, components, a.created, a.engine_commit,
                                      generator=generator_identity())

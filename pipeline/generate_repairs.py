@@ -15,7 +15,7 @@ The repair example is: question + refused scene + engine reason -> the original 
 (the full corrected scene; v0.1 repairs are full scenes, see DATA.md 4.1).
 
 Usage:
-  python3 pipeline/generate_repairs.py --engine PATH/marty-solid --engine-commit 76104dea \\
+  python3 pipeline/generate_repairs.py --engine PATH/marty-solid --engine-commit d5f42c2e6124487d53f046171526d26d2128330d \\
       --examples examples.jsonl --seed 1 --out repairs.jsonl [--rejects rejects.jsonl] \\
       [--per-example 1] [--created YYYY-MM-DD]
 
@@ -297,7 +297,8 @@ def generate(engine, catalog, examples, seed, per_example, created, engine_commi
                     "refusedSha256": sha(refused_text),
                     "sceneSha256": sha(original),
                     "generator": {"name": NAME, "version": VERSION, "seed": seed, **(generator or {})},
-                    "engine": {"commit": engine_commit, "checkerSha256": engine.sha256},
+                    "engine": {"commit": engine_commit, "checkerSha256": engine.sha256,
+                               "identity": engine.identity, "strict": engine.strict},
                     "created": created,
                 },
                 "check": {"command": engine.COMMAND,
@@ -317,6 +318,8 @@ def main(argv=None):
     ap.add_argument("--out", required=True, help="new JSON Lines file (must not exist)")
     ap.add_argument("--rejects", help="new JSON Lines file for dropped pairs (must not exist)")
     ap.add_argument("--created", default=datetime.datetime.now(datetime.timezone.utc).date().isoformat())
+    ap.add_argument("--no-strict", dest="strict", action="store_false",
+                    help="plain `check` (for a checker older than MartyGraphics d5f42c2)")
     a = ap.parse_args(argv)
     if not re.fullmatch(r"[0-9a-f]{7,40}", a.engine_commit):
         ap.error("--engine-commit must be 7-40 lowercase hex characters")
@@ -341,7 +344,7 @@ def main(argv=None):
     except (OSError, ValueError) as e:
         ap.error(str(e))
 
-    engine = gc.Engine([a.engine], a.engine)
+    engine = gc.Engine([a.engine], a.engine, strict=a.strict)
     try:
         catalog = load_catalog(engine)
         repairs, rejects = generate(engine, catalog, examples, a.seed, a.per_example, a.created, a.engine_commit,

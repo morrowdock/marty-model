@@ -114,7 +114,7 @@ class Generate(unittest.TestCase):
 def wrapper(folder):
     path = os.path.join(folder, "marty-solid")
     with open(path, "w") as f:
-        f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --mode=ok "$@"\n')
+        f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --exe="$0" --mode=ok "$@"\n')
     os.chmod(path, 0o755)
     return path
 

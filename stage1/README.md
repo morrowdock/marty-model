@@ -11,8 +11,8 @@ lives in a folder **outside the repository**, called `$STAGE` below. Nothing fro
 Measured, per model, on a development split made by the same generator (its own random
 stream, `seed:dev`; no dev prompt or target equals a train one; not the sealed sets):
 
-* engine acceptance on the first try and within 3 repairs (`marty-solid check` at
-  MartyGraphics 76104dea; `--strict` does not exist at that commit yet);
+* engine acceptance on the first try and within 3 repairs (`marty-solid check --strict`
+  at MartyGraphics `d5f42c2`);
 * correctness: for `author.ratio`, the engine's solved ratio equals the asked ratio and
   the fixed values are kept; for `author.params` and `repair`, the accepted scene keeps
   exactly the intended values;
@@ -66,19 +66,19 @@ export HF_HOME="$STAGE/hf"   # keep the Hub cache inside $STAGE
   --receipt "$STAGE/receipts/download-granite.json"
 
 # 3. Data (engine calls; through the gate)
-gate python3 stage1/make_data.py --engine "$ENGINE" --engine-commit 76104dea --out-dir "$STAGE/data/v1" --seed 1
+gate python3 stage1/make_data.py --engine "$ENGINE" --engine-commit d5f42c2e6124487d53f046171526d26d2128330d --out-dir "$STAGE/data/v1" --seed 1
 
 # 4. Template check (tokenizer only), untrained reference (small), training chunks, evaluation chunks
 "$STAGE/venv/bin/python" stage1/check_template.py --model "$STAGE/models/granite" --data "$STAGE/data/v1" \
   --split train --receipt "$STAGE/receipts/template-granite.json"
 gate "$STAGE/venv/bin/python" stage1/run_eval.py --model "$STAGE/models/granite" --data "$STAGE/data/v1" \
-  --engine "$ENGINE" --engine-commit 76104dea --out "$STAGE/runs/granite-base-0.jsonl" --start 0 --limit 20
+  --engine "$ENGINE" --engine-commit d5f42c2e6124487d53f046171526d26d2128330d --out "$STAGE/runs/granite-base-0.jsonl" --start 0 --limit 20
 gate "$STAGE/venv/bin/python" stage1/train_chunk.py --model "$STAGE/models/granite" --data "$STAGE/data/v1" \
   --config stage1/lora.yaml --chunk 1 --iters 100 --adapters "$STAGE/adapters/granite"
 #    ... chunk 2, 3, ... (each resumes from the previous chunk's adapter)
 gate "$STAGE/venv/bin/python" stage1/run_eval.py --model "$STAGE/models/granite" \
   --adapter "$STAGE/adapters/granite/chunk-N" --data "$STAGE/data/v1" --engine "$ENGINE" \
-  --engine-commit 76104dea --out "$STAGE/runs/granite-lora-0.jsonl" --start 0 --limit 25
+  --engine-commit d5f42c2e6124487d53f046171526d26d2128330d --out "$STAGE/runs/granite-lora-0.jsonl" --start 0 --limit 25
 #    ... --start 25, 50, 75
 python3 stage1/summarize.py "$STAGE"/runs/granite-lora-*.jsonl
 

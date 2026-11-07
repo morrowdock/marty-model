@@ -4,10 +4,11 @@
 It knows only the built-in component ids and the closed-form ratios the generator
 uses. It is NOT an engine: real checks come from the integration test.
 
-Usage: python3 fake_engine.py [--mode=ok|wrong|garbage|exit|sleep|accept] check FILE.json
+Usage: python3 fake_engine.py [--mode=ok|wrong|garbage|exit|sleep|accept|badid] check FILE.json [--strict]
        python3 fake_engine.py components
 """
 
+import hashlib
 import json
 import sys
 import time
@@ -90,9 +91,13 @@ def report(doc):
 
 
 def main(argv):
-    mode = "ok"
-    if argv and argv[0].startswith("--mode="):
-        mode = argv.pop(0).split("=", 1)[1]
+    mode, exe = "ok", __file__
+    while argv and argv[0].startswith("--"):
+        flag = argv.pop(0)
+        if flag.startswith("--mode="):
+            mode = flag.split("=", 1)[1]
+        elif flag.startswith("--exe="):  # a wrapper script that runs this file: report ITS hash
+            exe = flag.split("=", 1)[1]
     if mode == "garbage":
         print("not json")
         return 0
@@ -101,7 +106,7 @@ def main(argv):
     if argv == ["components"]:
         print(json.dumps(CATALOG))
         return 0
-    assert argv[0] == "check", argv
+    assert argv[0] == "check" and all(x == "--strict" for x in argv[2:]), argv
     with open(argv[1], encoding="utf-8") as f:
         doc = json.load(f)
     reason, part = validate(doc)
@@ -114,7 +119,12 @@ def main(argv):
     if mode == "accept":  # an engine that accepts everything (to test mutation checks)
         reason, part, ratios = None, None, ratios or {}
     ok = reason is None
-    print(json.dumps({"ok": ok, "reason": reason, "part": part, "ratios": ratios, "parts": 2, "triangles": 100}))
+    with open(exe, "rb") as me:
+        own = hashlib.sha256(me.read()).hexdigest()
+    identity = {"name": "MartyGraphics", "version": "fake", "reportFormat": 1,
+                "executableSHA256": "0" * 64 if mode == "badid" else own}
+    print(json.dumps({"ok": ok, "reason": reason, "part": part, "ratios": ratios, "parts": 2, "triangles": 100,
+                      "engine": identity}))
     if mode == "exit":
         return 0 if not ok else 1  # exit status disagrees with the report
     return 0 if ok else 1

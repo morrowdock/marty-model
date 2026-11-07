@@ -144,6 +144,24 @@ class Generate(unittest.TestCase):
         self.assertEqual(examples, [])
         self.assertIn("generator.ratioMismatch", {r["reason"] for r in rejects})
 
+    def test_engine_identity_must_match_the_binary(self):
+        examples, rejects = run(fake("badid"), count=2, components=["spurPair"])
+        self.assertEqual(examples, [])
+        self.assertEqual({r["reason"] for r in rejects}, {"engine.identity"})
+
+    def test_identity_and_strict_are_recorded(self):
+        examples, _ = run(fake(), count=2, components=["spurPair"])
+        eng = examples[0]["provenance"]["engine"]
+        self.assertTrue(eng["strict"])
+        self.assertEqual(eng["identity"]["executableSHA256"], eng["checkerSha256"])
+        self.assertEqual(examples[0]["check"]["command"], "marty-solid check --strict")
+        plain = g.Engine([sys.executable, FAKE, "--mode=ok"], FAKE, strict=False)
+        try:
+            self.assertEqual(plain.COMMAND, "marty-solid check")
+            self.assertTrue(plain.check(examples[0]["scene"])["ok"])
+        finally:
+            plain.close()
+
     def test_bad_engine_output_is_rejected(self):
         for mode, reason in (("garbage", "engine.output"), ("exit", "engine.exit")):
             examples, rejects = run(fake(mode), count=2, components=["spurPair"])
@@ -163,7 +181,7 @@ def wrapper(folder, mode="ok"):
     needs a temp folder that allows running files)."""
     path = os.path.join(folder, "marty-solid")
     with open(path, "w") as f:
-        f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --mode={mode} "$@"\n')
+        f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --exe="$0" --mode={mode} "$@"\n')
     os.chmod(path, 0o755)
     return path
 

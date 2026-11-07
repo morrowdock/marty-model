@@ -114,7 +114,7 @@ class MakeData(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             exe = os.path.join(d, "marty-solid")
             with open(exe, "w") as f:
-                f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --mode=ok "$@"\n')
+                f.write(f'#!/bin/sh\nexec "{sys.executable}" "{FAKE}" --exe="$0" --mode=ok "$@"\n')
             os.chmod(exe, 0o755)
             out = os.path.join(d, "data")
             args = ["--engine", exe, "--engine-commit", "76104dea", "--out-dir", out, "--seed", "1",
