@@ -20,13 +20,13 @@ Status: design, updated 2026-11-07 with the owner's decisions
    use their outputs (or any other AI company's). Q4 and Q5 stay open.
 4. **Stage 1 approved:** mlx-lm in an isolated virtual environment, two 4-bit open
    bases (IBM Granite 4.2 3B, Qwen3.5-4B), and a first small local QLoRA comparison on
-   engine-generated data only ([PLAN.md](PLAN.md) §5; the `stage1/` harness is planned in
-   a separate pull request).
+   engine-generated data only ([PLAN.md](PLAN.md) §5; [stage1/README.md](stage1/README.md)).
 
 What this means for existing output: examples from `pipeline/generate_components.py`
 use AI-written templates, so they now carry `"clearance": "excluded"` and are never
 training data. Repair pairs made from them inherit `excluded`. Prose-free Stage 1 data
-(planned `stage1/make_data.py`, separate pull request) carries `"prose": false`.
+([`stage1/make_data.py`](stage1/README.md)) carries `"prose": false` and
+`"clearance": "cleared-stage1-local"`.
 
 This is not legal advice. Where a question is legal, it is written down for the owner
 instead of being decided here.
@@ -236,7 +236,7 @@ Every record carries `provenance`:
 | `source` | for example `programmatic.components`, `human.<handle>`, `open-weight.<model>` |
 | `authorKind` | `program`, `person`, `open-weight-model` or `learner-correction` |
 | `licence` | licence of the example (Apache-2.0 unless stated) |
-| `clearance` | `pending-owner`, `cleared` (set only by the owner, per dataset version) or `excluded` (contains AI-company text; never training data) |
+| `clearance` | `pending-owner`, `cleared` (set only by the owner, per dataset version), `cleared-stage1-local` (prose-free Stage 1 data: the owner approved local training for the Stage 1 comparison on 2026-11-07; not for release) or `excluded` (contains AI-company text; never training data) |
 | `templateAuthor` | who wrote the sentence templates (for example `ai-agent:claude-opus-5-5` or `human.<handle>`); AI-written templates make an example `excluded` (§0) |
 | `clearanceReason` | why an example is `excluded`, for example `ai-written-text` |
 | `component`, `with` | component id and parameter values (programmatic) |

@@ -53,6 +53,7 @@ class MakeData(unittest.TestCase):
             self.assertEqual(doc["title"], meta["component"])
             self.assertEqual(doc["parts"][0]["with"], meta["with"])
             self.assertFalse(meta["provenance"]["prose"])
+            self.assertEqual(meta["provenance"]["clearance"], "cleared-stage1-local")
             self.assertEqual(meta["provenance"]["sceneSha256"], md.sha(target))
             self.assertTrue(user.startswith("task: author\n") or user.startswith("task: repair\n"))
 
