@@ -53,9 +53,18 @@ def load_catalog(engine):
     """{component id: {param name: spec}} from `<engine> components`."""
     try:
         done = subprocess.run(engine.cmd + ["components"], capture_output=True, timeout=engine.timeout, check=False)
+        if done.returncode != 0:
+            raise ValueError(f"exit {done.returncode}")
         data = json.loads(done.stdout.decode("utf-8"))
-        return {c["id"]: c["params"] for c in data["components"]}
-    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as e:
+        catalog = {c["id"]: c["params"] for c in data["components"]}
+        for cid, params in catalog.items():
+            for name, spec in params.items():
+                for key in ("min", "max"):
+                    if isinstance(spec.get(key), bool) or not isinstance(spec.get(key), (int, float)):
+                        raise ValueError(f"{cid}.{name} has no numeric {key}")
+        return catalog
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError,
+            AttributeError, ValueError) as e:
         raise RuntimeError(f"cannot read the component catalog from the engine: {e}")
 
 
@@ -93,7 +102,9 @@ def m_integer(doc, spec, rng):
     name = _pick(rng, [n for n in _use(doc).get("with", {}) if spec[n].get("integer")])
     if name is None:
         return None
-    _use(doc)["with"][name] = _use(doc)["with"][name] + 0.5
+    value = _use(doc)["with"][name]
+    # Stay inside the range, so the engine reports the integer rule and not the range rule.
+    _use(doc)["with"][name] = value + 0.5 if value + 0.5 <= spec[name]["max"] else value - 0.5
     return doc, f"component.param.integer.{name}"
 
 
@@ -185,7 +196,7 @@ def read_examples(path, engine_commit):
     """Accepted author.solid examples, validated and bounded. Raises ValueError on bad input."""
     if os.path.getsize(path) > MAX_INPUT_BYTES:
         raise ValueError(f"{path}: larger than {MAX_INPUT_BYTES} bytes")
-    rows = []
+    rows, seen = [], set()
     with open(path, "rb") as f:
         for number, raw in enumerate(f, 1):
             if len(raw) > MAX_LINE_BYTES:
@@ -194,15 +205,24 @@ def read_examples(path, engine_commit):
                 raise ValueError(f"{path}: more than {MAX_EXAMPLES} examples")
             try:
                 row = json.loads(raw.decode("utf-8"))
+                prov = row["provenance"]
                 ok = (row["schema"] == SCHEMA and row["task"] == "author.solid" and row["check"]["ok"] is True
-                      and isinstance(row["scene"], str) and isinstance(row["question"], str))
-                commit = row["provenance"]["engine"]["commit"]
+                      and isinstance(row["id"], str) and isinstance(row["scene"], str)
+                      and isinstance(row["question"], str) and isinstance(row["check"]["ratios"], dict)
+                      and all(isinstance(prov[k], str) for k in
+                              ("component", "licence", "clearance", "templateAuthor", "sceneSha256")))
+                commit = prov["engine"]["commit"]
             except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError) as e:
                 raise ValueError(f"{path}:{number}: not an accepted {SCHEMA} author.solid example ({e})")
             if not ok:
                 raise ValueError(f"{path}:{number}: not an accepted {SCHEMA} author.solid example")
             if commit != engine_commit:
                 raise ValueError(f"{path}:{number}: example was checked at engine {commit}, not {engine_commit}")
+            if sha(row["scene"]) != prov["sceneSha256"]:
+                raise ValueError(f"{path}:{number}: scene does not match its sceneSha256")
+            if row["id"] in seen:
+                raise ValueError(f"{path}:{number}: duplicate id {row['id']}")
+            seen.add(row["id"])
             rows.append(row)
     return rows
 
@@ -308,8 +328,8 @@ def main(argv=None):
     if not 1 <= a.per_example <= len(MUTATIONS):
         ap.error(f"--per-example must be 1..{len(MUTATIONS)}")
     outputs = [p for p in (a.out, a.rejects) if p]
-    if len({os.path.abspath(p) for p in outputs}) != len(outputs) or os.path.abspath(a.examples) in {
-            os.path.abspath(p) for p in outputs}:
+    if len({os.path.realpath(p) for p in outputs}) != len(outputs) or os.path.realpath(a.examples) in {
+            os.path.realpath(p) for p in outputs}:
         ap.error("--examples, --out and --rejects must be different files")
     for path in outputs:
         if os.path.exists(path):
@@ -340,8 +360,8 @@ def main(argv=None):
         reasons[r["reason"]] = reasons.get(r["reason"], 0) + 1
     print(json.dumps({"repairs": len(repairs), "byMutation": counts, "rejects": len(rejects),
                       "rejectReasons": reasons, "checkerSha256": engine.sha256}, sort_keys=True), file=sys.stderr)
-    return 0 if repairs and not any(r["reason"] in ("repair.targetChanged", "repair.unexpectedReason")
-                                    for r in rejects) else 1
+    fatal = ("repair.targetChanged", "repair.unexpectedReason", "repair.componentNotInCatalog")
+    return 0 if repairs and not any(r["reason"] in fatal for r in rejects) else 1
 
 
 if __name__ == "__main__":
