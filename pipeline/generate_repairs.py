@@ -19,7 +19,7 @@ Usage:
       --examples examples.jsonl --seed 1 --out repairs.jsonl [--rejects rejects.jsonl] \\
       [--per-example 1] [--created YYYY-MM-DD]
 
-Status: design reference; output inherits "clearance": "pending-owner" (DATA.md 2).
+Status: design reference; output inherits "clearance" from its source examples (DATA.md 0).
 """
 
 import argparse

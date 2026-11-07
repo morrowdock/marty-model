@@ -3,10 +3,11 @@
 `generate_components.py` makes engine-checked examples from the MartyGraphics built-in
 solid components. It calls no AI model and uses only the Python standard library.
 
-**Status:** design reference. Its output carries `"clearance": "pending-owner"` and is
-**not cleared for training** until the owner decides the data-rights questions (the
-templates and this script were written by an AI agent, recorded in each example as
-`templateAuthor`; see [DATA.md](../DATA.md) §2).
+**Status:** design reference. Its sentence templates were written by an AI agent, so
+by the owner's decision of 2026-11-07 its output is **never training data**: every
+example carries `"clearance": "excluded"` and `templateAuthor` (see
+[DATA.md](../DATA.md) §0). Human-written templates
+([docs/TEMPLATE-SLOTS.md](../docs/TEMPLATE-SLOTS.md)) will replace them.
 
 ## What it does
 
@@ -59,7 +60,7 @@ One JSON object per line:
 | `task` | `author.solid` |
 | `question` | the learner question (input) |
 | `scene` | the scene JSON text (target), compact, one `use` entry plus steps |
-| `provenance` | `source`, `authorKind` (`program`), `licence`, `clearance`, `templateAuthor`, `component`, `with`, `generator` (name, version, seed, script `sha256`, git `commit`, `dirty`), `engine` (commit, `checkerSha256`), `created`, `sceneSha256` |
+| `provenance` | `source`, `authorKind` (`program`), `licence`, `clearance` (`excluded`), `clearanceReason`, `templateAuthor`, `component`, `with`, `generator` (name, version, seed, script `sha256`, git `commit`, `dirty`), `engine` (commit, `checkerSha256`), `created`, `sceneSha256` |
 | `check` | `command`, `ok`, `reason`, `ratios`, `parts`, `triangles` from the engine; `engineVerified` (ratios compared with the text); `derived` (other stated numbers, exact arithmetic) |
 
 Rejects (`marty-model.reject/0`) keep `component`, `with`, `scene`, `reason`, `part`

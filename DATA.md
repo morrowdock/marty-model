@@ -1,8 +1,31 @@
 # Marty model data
 
-Status: design, 2026-11-06. No training dataset exists yet. Nothing here is cleared
-for training until the owner decides the questions in
-[§2 Questions for the owner](#2-questions-for-the-owner).
+Status: design, updated 2026-11-07 with the owner's decisions
+([§0](#0-owner-decisions-2026-11-07)). No training dataset is cleared yet.
+
+## 0. Owner decisions (2026-11-07)
+
+1. **No AI-company text in training data.** No text written by a model of an AI
+   company (Claude, OpenAI, Google or any other hosted model) goes into training data.
+   This includes everything an AI agent wrote in this repository and in MartyGraphics:
+   the generator's sentence templates, worked examples, component titles and `about`
+   text, and docs.
+2. **Allowed sources:** engine-generated examples (component ids, parameter names, part
+   ids, refusal reasons, numbers and scene JSON computed by the engine and our programs);
+   outputs of open-licence models whose licences allow training; and sentences written
+   by a person, starting with the template slots in
+   [docs/TEMPLATE-SLOTS.md](docs/TEMPLATE-SLOTS.md). The agent may not draft or
+   "neutralise" those sentences; the owner writes or approves human-written ones.
+3. **Q1–Q3 are closed.** We do not ask Anthropic, OpenAI or Google for permission; we
+   do not use their outputs. Q4 and Q5 stay open.
+4. **Stage 1 approved:** mlx-lm in an isolated virtual environment, two 4-bit open
+   bases (IBM Granite 4.2 3B, Qwen3.5-4B), and a first small local QLoRA comparison on
+   engine-generated data only ([PLAN.md](PLAN.md) §5, `stage1/`).
+
+What this means for existing output: examples from `pipeline/generate_components.py`
+use AI-written templates, so they now carry `"clearance": "excluded"` and are never
+training data. Repair pairs made from them inherit `excluded`. Prose-free Stage 1 data
+(`stage1/make_data.py`, separate pull request) carries `"prose": false`.
 
 This is not legal advice. Where a question is legal, it is written down for the owner
 instead of being decided here.
@@ -27,10 +50,11 @@ instead of being decided here.
 
 ## 2. Questions for the owner
 
-These need a decision from the owner, perhaps with a lawyer. Until they are decided,
-generated data carries `"clearance": "pending-owner"` and is not used for training.
+Q1–Q3 were **closed by the owner on 2026-11-07** ([§0](#0-owner-decisions-2026-11-07)):
+no AI-company text in training data, no permission requests. The text below is kept as
+the record of why the question came up. Q4 and Q5 are still open.
 
-**Q1. Text and code written by Claude in this project and in MartyGraphics.**
+**Q1 (closed 2026-11-07). Text and code written by Claude in this project and in MartyGraphics.**
 Most MartyGraphics commits carry `Co-Authored-By: Claude Opus 5.5` (16 of the 23
 commits on main at 76104dea), and this repository, including the generator and its
 sentence templates, is written by a Claude agent. Anthropic's terms
@@ -55,7 +79,7 @@ program-computed scenes are affected;
 **Recommended:** (a) and (b) together. The templates are small (about 40 sentences),
 so (b) costs the owner about an hour.
 
-**Q2. Which Anthropic terms apply to our account?** Which agreement covers the Claude
+**Q2 (closed 2026-11-07). Which Anthropic terms apply to our account?** Which agreement covers the Claude
 sessions used so far: a consumer plan (the Consumer Terms name Claude.ai and Claude
 Pro; they do not name Max or Claude Code on the page) or the API under the Commercial
 Terms (§D.4 (a): no building a competing product, "including to train competing AI
@@ -63,7 +87,7 @@ models or resell the Services except as expressly approved by Anthropic"; (b) no
 reverse engineering or duplicating the Services; (c) no support for a third party
 doing so)? The Usage Policy applies to both.
 
-**Q3. OpenAI terms.** Some work across these projects used an OpenAI model through
+**Q3 (closed 2026-11-07). OpenAI terms.** Some work across these projects used an OpenAI model through
 Codex. openai.com refused our automated fetches (HTTP
 403), so we could not read the current terms. One secondary tracker records a clause
 against using output "to develop artificial intelligence models that compete with
@@ -81,11 +105,11 @@ approves each public dataset release.
 
 | | Source | Status | Notes |
 | --- | --- | --- | --- |
-| A | Programmatic generation from the engine and its built-in components | **preferred**; reference generator exists; text templates wait on Q1 | §4 |
+| A | Programmatic generation from the engine and its built-in components | **allowed**; prose-free today; sentence templates only from a person (docs/TEMPLATE-SLOTS.md); the current AI-written templates are excluded | §4 |
 | B | Human-authored examples (a named person, DCO sign-off) | allowed | the owner or contributors; each file marked human-authored |
-| B' | Agent-authored examples in the MartyGraphics repo | **excluded** until Q1 (Claude) and Q3 (OpenAI) are decided | we assume, until the owner decides, that the Apache-2.0 licence on the repo does not remove the account holder's obligations to the provider; see §3.1 |
-| C | Outputs of open-weight models with permissive licences | allowed after Stage 1 approval (needs a local model download) | §3.3 |
-| C' | Outputs of hosted APIs whose terms allow training | possible, needs owner approval (paid API, credentials, data leaves the machine) | DeepSeek explicitly allows it; §3.1 |
+| B' | Agent-authored examples and text in the MartyGraphics repo and this repo | **excluded** (owner decision 2026-11-07) | §0 |
+| C | Outputs of open-weight models with permissive licences | allowed (Stage 1 approved 2026-11-07); not used yet | §3.3 |
+| C' | Outputs of hosted APIs, even where their terms allow training | **excluded** (owner decision 2026-11-07: no AI-company text) | §3.1 |
 | D | Learner corrections | later, with consent | Q4 |
 | X | Sealed evaluation sets, coordinator scratch, private app content | **never** | |
 
@@ -209,7 +233,7 @@ Every record carries `provenance`:
 | `source` | for example `programmatic.components`, `human.<handle>`, `open-weight.<model>` |
 | `authorKind` | `program`, `person`, `open-weight-model` or `learner-correction` |
 | `licence` | licence of the example (Apache-2.0 unless stated) |
-| `clearance` | `pending-owner` or `cleared` (set only by the owner, per dataset version) |
+| `clearance` | `pending-owner`, `cleared` (set only by the owner, per dataset version) or `excluded` (contains AI-company text; never training data) |
 | `templateAuthor` | who wrote the sentence templates (for example `ai-agent:claude-opus-5-5` or `human.<handle>`); decides Q1 |
 | `component`, `with` | component id and parameter values (programmatic) |
 | `generator` | name, version, seed, script SHA-256, git commit and a dirty flag (programmatic) |
