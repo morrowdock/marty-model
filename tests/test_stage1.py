@@ -57,6 +57,18 @@ class MakeData(unittest.TestCase):
             self.assertEqual(meta["provenance"]["sceneSha256"], md.sha(target))
             self.assertTrue(user.startswith("task: author\n") or user.startswith("task: repair\n"))
 
+    def test_task_mix_follows_the_weights(self):
+        _, metas = build(120)
+        counts = {}
+        for m in metas:
+            counts[m["task"]] = counts.get(m["task"], 0) + 1
+        # Weights 6 : 2 : 4 (ratio : params : repair) of 12; allow sampling noise.
+        self.assertGreater(counts["author.ratio"], 120 * 6 / 12 * 0.6)
+        self.assertGreater(counts["repair"], 120 * 4 / 12 * 0.6)
+        planetary = sum(1 for m in metas if m["task"] == "author.ratio" and m["component"] == "planetaryStage")
+        spur = sum(1 for m in metas if m["task"] == "author.ratio" and m["component"] == "spurPair")
+        self.assertLess(abs(planetary - spur), max(planetary, spur))  # same weight: neither dominates
+
     def test_ratio_targets_match_the_parameters(self):
         rows, metas = build(60)
         for row, meta in zip(rows, metas):

@@ -102,11 +102,16 @@ def build(engine, catalog, n, seed, split, created, engine_commit, generator, se
     rng = random.Random(f"{seed}:{split}")
     weights = [w for *_, w in MIX]
     rows, metas, attempts = [], [], 0
+    slot = None  # the (task, component) being filled; kept until it succeeds, so refusals do not skew the mix
     while len(rows) < n and attempts < n * 40:
         attempts += 1
-        task, component, _ = rng.choices(MIX, weights=weights)[0]
+        if slot is None:
+            task, component, _ = rng.choices(MIX, weights=weights)[0]
+            if task == "repair":
+                component = rng.choice(sorted(IID))
+            slot = (task, component)
+        task, component = slot
         if task == "repair":
-            component = rng.choice(sorted(IID))
             base_task = "author.ratio" if component in ("spurPair", "planetaryStage") else "author.params"
             _, target_scene, _, values = sample_author(rng, base_task, component)
         else:
@@ -133,6 +138,7 @@ def build(engine, catalog, n, seed, split, created, engine_commit, generator, se
                 continue  # keep only exact, known refusals
             user = repair_user(refusal["reason"], refusal.get("part"), refused)
             want = {"reason": refusal["reason"], "mutation": mutation}
+        slot = None
         seen_scenes.add(sha(target_scene))
         rows.append({"messages": [{"role": "user", "content": user},
                                   {"role": "assistant", "content": target_scene}]})
