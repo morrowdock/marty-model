@@ -219,6 +219,45 @@ class Harness(unittest.TestCase):
         self.assertEqual((s["n"], s["acceptedFirst"], s["acceptedWithin3"], s["correct"]), (2, 1, 1, 1))
 
 
+class FakeTokenizer:
+    """Renders chats as character lists, like a template with an optional thinking block."""
+
+    def __init__(self, thinking_default, answer_prefix):
+        self.thinking_default, self.answer_prefix = thinking_default, answer_prefix
+
+    def apply_chat_template(self, messages, add_generation_prompt=False, return_dict=True, enable_thinking=None):
+        think = self.thinking_default if enable_thinking is None else enable_thinking
+        text = "".join(f"<{m['role']}>{m['content']}" for m in messages)
+        if messages and messages[-1]["role"] == "assistant":
+            text = text.replace("<assistant>", "<assistant>" + self.answer_prefix)
+        if add_generation_prompt:
+            text += "<assistant>" + ("<think>\n" if think else self.answer_prefix)
+        return list(text)
+
+
+class PromptMode(unittest.TestCase):
+    chat = [{"role": "user", "content": "u"}, {"role": "assistant", "content": "a"}]
+
+    def test_mask_prefix_is_used_when_it_matches_training(self):
+        name, kwargs, ids, mask = harness.prompt_mode(FakeTokenizer(False, "<e>"), self.chat)
+        self.assertEqual((name, kwargs, len(ids)), ("training-mask", {}, mask))
+
+    def test_thinking_off_is_used_when_the_mask_prefix_does_not_match(self):
+        name, kwargs, ids, mask = harness.prompt_mode(FakeTokenizer(True, "<think></think>"), self.chat)
+        self.assertEqual((name, kwargs), ("no-thinking", {"enable_thinking": False}))
+        full = FakeTokenizer(True, "<think></think>").apply_chat_template(self.chat)
+        self.assertEqual(full[:len(ids)], ids)
+
+    def test_no_mode_when_nothing_matches(self):
+        class Odd(FakeTokenizer):
+            def apply_chat_template(self, messages, add_generation_prompt=False, **kw):
+                out = super().apply_chat_template(messages, add_generation_prompt, **kw)
+                return out + list("!") if add_generation_prompt else out
+        name, _, ids, _ = harness.prompt_mode(Odd(True, "<x>"), self.chat)
+        self.assertIsNone(name)
+        self.assertIsNone(ids)
+
+
 class TrainingAndSummary(unittest.TestCase):
     def test_chunks_cover_every_row_once_before_repeating(self):
         import train_chunk

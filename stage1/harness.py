@@ -31,6 +31,29 @@ def clean(text):
     return (m.group(1) if m else text).strip()
 
 
+PROMPT_MODES = (("training-mask", {}), ("no-thinking", {"enable_thinking": False}))
+
+
+def prompt_mode(tokenizer, messages):
+    """The evaluation prompt that matches training for this chat (user + assistant).
+
+    `tokenizer` is mlx-lm's TokenizerWrapper, which training also uses. Training renders
+    `messages` with the wrapper's defaults and masks the loss up to the length of
+    `messages[:-1]` rendered with add_generation_prompt=True. The first mode IS that
+    mask prefix; the second turns thinking off. Returns (name, kwargs, prompt token ids,
+    mask offset) for the first mode whose prompt is an exact prefix of the training
+    render, or (None, None, None, offset) when none is.
+    """
+    full = list(tokenizer.apply_chat_template(messages, return_dict=False))
+    mask = list(tokenizer.apply_chat_template(messages[:-1], add_generation_prompt=True, return_dict=False))
+    for name, kwargs in PROMPT_MODES:
+        ids = list(tokenizer.apply_chat_template(messages[:-1], add_generation_prompt=True, return_dict=False,
+                                                 **kwargs))
+        if full[:len(ids)] == ids:
+            return name, kwargs, ids, len(mask)
+    return None, None, None, len(mask)
+
+
 def repair_user(reason, part, scene_text):
     # Must match stage1/make_data.py:repair_user (the training format).
     return f"task: repair\nreason: {reason}\npart: {part}\nscene: {scene_text}"

@@ -84,8 +84,16 @@ def main(argv=None):
     prev = os.path.join(a.adapters, f"chunk-{a.chunk - 1}", "adapters.safetensors")
     if os.path.exists(out):
         ap.error(f"{out} exists; refusing to overwrite")
-    if a.chunk > 1 and not os.path.exists(prev):
-        ap.error(f"missing previous chunk {prev}")
+    if a.chunk > 1:
+        prev_receipt = os.path.join(a.adapters, f"chunk-{a.chunk - 1}", "receipt.json")
+        if not os.path.exists(prev) or not os.path.exists(prev_receipt):
+            ap.error(f"missing previous chunk {prev}")
+        with open(prev_receipt, encoding="utf-8") as f:
+            before = json.load(f)
+        if before.get("exit") != 0:
+            ap.error(f"previous chunk did not finish (exit {before.get('exit')}); do not resume from it")
+        if before.get("iters") != a.iters:
+            ap.error(f"use the same --iters as earlier chunks ({before.get('iters')}), so the data order stays exact")
     os.makedirs(a.adapters, exist_ok=True)
     if shutil.disk_usage(a.adapters).free < a.keep_free_gb * 1e9:
         raise SystemExit(f"less than {a.keep_free_gb} GB free; not starting")
@@ -114,11 +122,17 @@ def main(argv=None):
         stdout, stderr = proc.communicate(timeout=a.timeout_minutes * 60)
         exit_code = proc.returncode
     except subprocess.TimeoutExpired:
-        os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         try:
             stdout, stderr = proc.communicate(timeout=30)
         except subprocess.TimeoutExpired:
-            os.killpg(proc.pid, signal.SIGKILL)
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             stdout, stderr = proc.communicate()
         exit_code = "timeout"
     log = (stdout or "") + "\n" + (stderr or "")
@@ -129,6 +143,10 @@ def main(argv=None):
     import mlx.core as mx  # noqa: E402
     import mlx_lm  # noqa: E402
     adapter = os.path.join(out, "adapters.safetensors")
+    if exit_code == 0:  # keep only the final adapter: intermediate saves fill the shared disk
+        for name in os.listdir(out):
+            if re.fullmatch(r"\d+_adapters\.safetensors", name):
+                os.remove(os.path.join(out, name))
     receipt = {"chunk": a.chunk, "iters": a.iters, "exit": exit_code, "seconds": round(seconds, 1),
                "maxRssGB": round(int(rss[-1]) / 1e9, 3) if rss else None, **summarize_metrics(metrics),
                "rows": {"orderStart": start, "count": len(rows), "trainLines": len(lines),

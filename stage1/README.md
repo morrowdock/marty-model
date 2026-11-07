@@ -38,12 +38,14 @@ Default sizes: train 1,300, valid 100 (for the training loss), dev 100 (for eval
 mix about 3 : 3 : 1 : 1 : 4 (spur ratio, planetary ratio, crank, propeller, repair).
 Splits never share a target scene or a prompt.
 
-**Prompt format.** Both bases' chat templates turn on "thinking" by default. Training
-renders each row with the template's defaults; evaluation builds the prompt with
-`enable_thinking=False`, which is exactly the prefix the training render puts before
-the answer. `check_template.py` proves this for every row before training (and
-`run_eval.py` checks it again at start-up) and records where mlx-lm's loss mask
-starts.
+**Prompt format.** Both bases' chat templates know a "thinking" mode. mlx-lm trains
+through its tokenizer wrapper, which renders each row with its own defaults (it sets
+`enable_thinking` from whether the vocabulary has thinking tokens) and masks the loss up
+to the rendered prompt. Evaluation uses the same wrapper and the first prompt form that
+is an exact prefix of that training render: the mask prefix itself, or the prompt with
+thinking turned off (`harness.prompt_mode`). `check_template.py` proves one form for
+every row before training and records `has_thinking` and where the loss mask starts;
+`run_eval.py` checks again at start-up and records the form it used.
 
 ## Procedure
 
@@ -106,8 +108,10 @@ because the mini has 8 GB and is shared.
 fixed shuffle of `train.jsonl`, so no row repeats until every row was seen once (with
 batch size 1, each row once per chunk). Chunk *k* resumes from chunk *k − 1*'s adapter;
 the optimizer (Adam) state starts fresh in each chunk, and the learning rate is
-constant. `train_chunk.py` runs mlx-lm in-process through `lora_runner.py`, so the
-receipt gets the losses, tokens per second and peak memory from mlx-lm's own callback.
+constant. Every chunk must use the same `--iters`, and a chunk resumes only from a
+previous chunk whose receipt shows exit 0. `train_chunk.py` runs mlx-lm in-process
+through `lora_runner.py`, so the receipt gets the losses, tokens per second and peak
+memory from mlx-lm's own callback; after a good chunk only the final adapter is kept.
 
 ## Receipts
 

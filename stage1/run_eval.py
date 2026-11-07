@@ -69,19 +69,16 @@ def main(argv=None):
     load_seconds = time.perf_counter() - t0
     sampler = make_sampler(temp=0.0)
 
-    def prompt_ids(messages):
-        # enable_thinking=False gives exactly the prefix that mlx-lm's training render
-        # puts before the answer (checked below, and by stage1/check_template.py).
-        return tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False,
-                                             return_dict=False)
+    # Choose the prompt form that is an exact prefix of mlx-lm's training render (the
+    # tokenizer here is mlx-lm's wrapper, as in training); check_template.py proves the
+    # same mode for every training row. Refuse to evaluate otherwise.
+    mode, mode_kwargs, _, _ = harness.prompt_mode(tokenizer, rows[0]["messages"])
+    if mode is None:
+        raise SystemExit("no evaluation prompt is a prefix of the training render; refusing to evaluate")
 
-    # Startup check: the training render of this split's first row must start with the
-    # evaluation prompt; otherwise the adapter is evaluated on a prompt it never saw.
-    first = rows[0]["messages"]
-    full = tokenizer.apply_chat_template(first, return_dict=False)
-    head = prompt_ids(first[:-1])
-    if full[:len(head)] != head:
-        raise SystemExit("evaluation prompt is not a prefix of the training render; refusing to evaluate")
+    def prompt_ids(messages):
+        return list(tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_dict=False,
+                                                  **mode_kwargs))
 
     def generate(user):
         ids = prompt_ids([{"role": "user", "content": user}])
@@ -104,7 +101,8 @@ def main(argv=None):
     run = {"model": os.path.abspath(a.model), "adapter": os.path.abspath(a.adapter) if a.adapter else None,
            "adapterSha256": file_sha(os.path.join(a.adapter, "adapters.safetensors")) if a.adapter else None,
            "mlx": mx.__version__, "mlxLm": mlx_lm.__version__, "engineCommit": a.engine_commit,
-           "checkerSha256": engine.sha256, "loadSeconds": round(load_seconds, 2), "maxTokens": a.max_tokens}
+           "checkerSha256": engine.sha256, "loadSeconds": round(load_seconds, 2), "maxTokens": a.max_tokens,
+           "promptMode": mode, "hasThinking": bool(getattr(tokenizer, "has_thinking", False))}
     try:
         with open(a.out, "x", encoding="utf-8") as out:
             for row, meta in items:
