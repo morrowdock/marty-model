@@ -14,7 +14,7 @@ on:
       engine_sha:
         description: Full MartyGraphics commit SHA to build marty-solid from
         required: true
-        default: 76104deae44a186ccf29a43db9e091f088f12103
+        default: d5f42c2e6124487d53f046171526d26d2128330d
 permissions:
   contents: read
 jobs:

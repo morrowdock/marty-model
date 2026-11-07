@@ -27,7 +27,7 @@ It does **not** need broad world knowledge, long reasoning or long context. That
 why a small model can be enough.
 
 **Typical sizes.** Measured: a component scene with 4 to 6 steps from the reference
-[generator](pipeline/README.md) (engine 76104dea) is 670 to 960 bytes; the component catalog is
+[generator](pipeline/README.md) (engine 76104dea; the pipeline now pins `d5f42c2`) is 670 to 960 bytes; the component catalog is
 about 3.8 KB; a hand-written full scene is 3.7 KB (53 lines). Estimated (no tokenizer
 run yet, about 3 bytes per token for JSON): a scene is about 250 to 350 output tokens
 and the catalog about 1,200 tokens, which can sit in a cached prompt prefix. Stage 1

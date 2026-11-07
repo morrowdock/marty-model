@@ -37,12 +37,18 @@ Same arguments and seed give the same bytes. Output files are never overwritten.
 ## Run
 
 The engine binary comes from MartyGraphics `Examples/Solid3D` (`swift build -c
-release`). The checker at 76104dea has no `--strict` option yet; the generator will
-add it when the engine does.
+release`). The pipeline is pinned to MartyGraphics `d5f42c2` (public PR #30) and runs
+`check --strict` by default (`--no-strict` for an older checker). From `d5f42c2` every
+report carries `engine` (version, report format and `executableSHA256`); the scripts
+refuse (`engine.identity`) a report whose `executableSHA256` is not the hash of the
+binary they ran, a report whose identity differs from the run's first one, and, in a
+strict run or after an identity was seen, a report without `engine`. They record the
+identity in provenance. The engine does not know its
+git commit, so `--engine-commit` still records it.
 
 ```sh
 mkdir -p out
-python3 pipeline/generate_components.py --engine PATH/marty-solid --engine-commit 76104dea \
+python3 pipeline/generate_components.py --engine PATH/marty-solid --engine-commit d5f42c2e6124487d53f046171526d26d2128330d \
   --count 40 --seed 1 --created 2026-11-06 --out out/examples.jsonl --rejects out/rejects.jsonl
 ```
 
@@ -97,7 +103,7 @@ or full) and a matching `sceneSha256`; ids must be unique; input files are bound
 per line, 200,000 examples).
 
 ```sh
-python3 pipeline/generate_repairs.py --engine PATH/marty-solid --engine-commit 76104dea \
+python3 pipeline/generate_repairs.py --engine PATH/marty-solid --engine-commit d5f42c2e6124487d53f046171526d26d2128330d \
   --examples out/examples.jsonl --seed 1 --per-example 2 --created 2026-11-06 --out out/repairs.jsonl
 ```
 
@@ -110,6 +116,6 @@ engine) as input, and `scene` (the original) as target. `provenance` adds `mutat
 
 ```sh
 python3 -m unittest discover -s tests                     # fake engine only
-MARTY_SOLID=PATH/marty-solid MARTY_SOLID_COMMIT=76104dea \
+MARTY_SOLID=PATH/marty-solid MARTY_SOLID_COMMIT=d5f42c2e6124487d53f046171526d26d2128330d \
   python3 -m unittest discover -s tests                   # adds the real-engine test
 ```

@@ -7,7 +7,7 @@ shared heavy-build gate, in bounded chunks (--start / --limit):
 
   zsh .../mini-heavy-gate.sh model "$VENV/bin/python" stage1/run_eval.py \\
       --model MODEL_DIR [--adapter ADAPTER_DIR] --data DATA_DIR --split dev \\
-      --engine PATH/marty-solid --engine-commit 76104dea --out RESULTS.jsonl --start 0 --limit 25
+      --engine PATH/marty-solid --engine-commit d5f42c2e6124487d53f046171526d26d2128330d --out RESULTS.jsonl --start 0 --limit 25
 
 Greedy decoding (temperature 0), at most --max-tokens per answer, at most 3 repairs.
 Each result line records the model, adapter, versions and the measured time, tokens and
@@ -50,6 +50,8 @@ def main(argv=None):
     ap.add_argument("--limit", type=int, default=25)
     ap.add_argument("--max-tokens", type=int, default=512)
     ap.add_argument("--max-repairs", type=int, default=3)
+    ap.add_argument("--no-strict", dest="strict", action="store_false",
+                    help="plain `check` (for a checker older than MartyGraphics d5f42c2)")
     a = ap.parse_args(argv)
     if os.path.exists(a.out):
         ap.error(f"{a.out} exists; refusing to overwrite")
@@ -97,8 +99,8 @@ def main(argv=None):
                       "finish": last.finish_reason if last else None,
                       "peakMemoryGB": round(mx.get_peak_memory() / 1e9, 3)}
 
-    engine = gc.Engine([a.engine], a.engine)
-    run = {"model": os.path.abspath(a.model), "adapter": os.path.abspath(a.adapter) if a.adapter else None,
+    engine = gc.Engine([a.engine], a.engine, strict=a.strict)
+    run = {"strict": a.strict, "model": os.path.abspath(a.model), "adapter": os.path.abspath(a.adapter) if a.adapter else None,
            "adapterSha256": file_sha(os.path.join(a.adapter, "adapters.safetensors")) if a.adapter else None,
            "mlx": mx.__version__, "mlxLm": mlx_lm.__version__, "engineCommit": a.engine_commit,
            "checkerSha256": engine.sha256, "loadSeconds": round(load_seconds, 2), "maxTokens": a.max_tokens,
@@ -108,11 +110,13 @@ def main(argv=None):
             for row, meta in items:
                 user = row["messages"][0]["content"]
                 result = harness.evaluate_item(meta, user, generate, engine.check, a.max_repairs)
-                out.write(json.dumps({**result, "run": run}, sort_keys=True) + "\n")
+                out.write(json.dumps({**result, "run": run, "engineIdentity": engine.identity},
+                                     sort_keys=True) + "\n")
                 out.flush()
     finally:
         engine.close()
-    print(json.dumps({"items": len(items), "out": a.out, **run}, sort_keys=True), file=sys.stderr)
+    print(json.dumps({"items": len(items), "out": a.out, "engineIdentity": engine.identity, **run}, sort_keys=True),
+          file=sys.stderr)
     return 0
 
 

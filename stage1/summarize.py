@@ -20,10 +20,11 @@ def main(paths):
                     raise SystemExit(f"duplicate item {r['id']} in {path}")
                 seen.add(r["id"])
                 run = r.get("run", {})
-                runs.add((run.get("model"), run.get("adapterSha256"), run.get("checkerSha256"), run.get("maxTokens")))
+                runs.add((run.get("model"), run.get("adapterSha256"), run.get("checkerSha256"), run.get("maxTokens"),
+                          run.get("strict")))
                 results.append(r)
     if len(runs) > 1:
-        raise SystemExit(f"these files mix {len(runs)} different runs (model, adapter, checker, max tokens); "
+        raise SystemExit(f"these files mix {len(runs)} different runs (model, adapter, checker, max tokens, strict); "
                          "summarise each run separately")
     print(json.dumps(harness.summarize(results), indent=1, sort_keys=True))
     return 0

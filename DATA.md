@@ -227,6 +227,12 @@ engine CLI can check a patch (requested from the coordinator), as in
 [pipeline/README.md](pipeline/README.md)) implements the A → engine check
 → number check path for `author.solid` today, with tests. It calls no AI model.
 
+**Engine report text.** From MartyGraphics `d5f42c2` the check report also holds
+sentences (for example `readBack`, the `facts` and `legend` text, the `stepFacts` check
+text and `notChecked`). Those are written by the engine's own templates, which AI agents
+wrote, so they never go into training data: training rows use no report string except
+`reason` and `part`, plus numbers.
+
 ## 5. Provenance schema
 
 Every record carries `provenance`:
@@ -242,7 +248,7 @@ Every record carries `provenance`:
 | `component`, `with` | component id and parameter values (programmatic) |
 | `generator` | name, version, seed, script SHA-256, git commit and a dirty flag (programmatic) |
 | `model` | open-weight model id, revision hash, licence URL, sampling settings (open-weight only) |
-| `engine` | MartyGraphics commit and checker SHA-256 |
+| `engine` | MartyGraphics commit, checker SHA-256, `strict`, and (from `d5f42c2`) the engine's own `identity` (name, version, report format, `executableSHA256`, which must equal the checker SHA-256) |
 | `created` | date (YYYY-MM-DD) |
 | `sceneSha256` | SHA-256 of the scene bytes |
 | `consent` | consent record id (learner corrections only; never the person's identity) |
