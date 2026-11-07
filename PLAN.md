@@ -1,6 +1,8 @@
 # Marty model plan
 
-Status: plan, 2026-11-06. No training, no weights downloaded, no paid compute.
+Status: plan, 2026-11-06; updated 2026-11-07. The owner approved Stage 1 on 2026-11-07
+(a small local QLoRA comparison on engine-generated, prose-free data; see
+[DATA.md](DATA.md) §0). No paid compute.
 Every stage after Stage 0 needs owner approval first (see [Stages and approvals](#stages-and-approvals)).
 
 ## 1. Goal and the job the model must do
@@ -235,7 +237,7 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 | Stage | Cash | Other |
 | --- | --- | --- |
 | 0. Plan and data pipeline (now) | $0 | agent time |
-| 1. Baseline bake-off (no training) | $0 | install mlx-lm in a project virtual environment; download two 4-bit bases (about 2 to 2.5 GB each); a few hours of mini time in the heavy gate |
+| 1. Small comparison (approved 2026-11-07) | $0 | mlx-lm in an isolated virtual environment outside the repository; two 4-bit bases (Granite 4.2 3B q4-mlx 2.07 GB, Qwen3.5-4B 4-bit 3.06 GB), one at a time while disk is short; short QLoRA chunks in the heavy gate |
 | 2. First LoRA runs, local | $0 cash; small electricity cost | estimated 1 to 3 days of exclusive mini time per full run (one heavy job at a time); disk: about 5 GB of bases + 10 GB of checkpoints + 6 to 8 GB for a bf16 base + the virtual environment, against about 23 GB free on a shared machine, so old checkpoints must be deleted or moved |
 | 2b. Same, cloud fallback | about $20 to $50 for a bake-off of several 1 to 2 GPU-hour runs, at the prices above | a cloud account and credentials (owner only) |
 | 3. Sealed evaluation and grading | uses the coordinator's existing subscription (spending by another party) | coordinator time |
@@ -249,7 +251,7 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 2. **Method: QLoRA with mlx-lm on the mini**, rank 16, loss on answers only. Use cloud
    only if the mini is too slow, with owner approval and a cost cap.
 3. **Data: engine-checked programmatic examples plus repair pairs** from the reference
-   generator, after the owner decides the data-rights questions in [DATA.md](DATA.md).
+   generator, with sentences only from a person ([DATA.md](DATA.md) §0).
 4. **Device: 4-bit MLX Swift with constrained JSON decoding**, cached prefix, repairs
    as patches from v0.2.
 5. **Gate: the coordinator's sealed sets** with blind grading; publish only when the
@@ -260,9 +262,11 @@ be undone. Every release file gets a SHA-256 and a Gitleaks scan of the reposito
 | Stage | Needs owner approval for |
 | --- | --- |
 | 0. Plan, data rules, generator | nothing (this repository) |
-| 1. Baseline bake-off | installing mlx-lm (MIT) in a virtual environment; downloading two 4-bit base models; mini time |
+| 1. Small comparison | **approved 2026-11-07**: mlx-lm (MIT) in an isolated virtual environment; two 4-bit base models; a first small QLoRA comparison on engine-generated data; mini time in bounded heavy-gate chunks |
 | 2. Training | starting training runs; downloading the bf16 base for fusing; disk use; cloud spending if used (with a cap) |
 | 3. Evaluation | sending model outputs to the coordinator for the sealed run; the coordinator's use of its subscription for grading |
 | 4. Release | publishing weights and datasets (cannot be undone) |
 
-The data-rights questions in [DATA.md](DATA.md) must be decided before Stage 2.
+The data-rights questions Q1–Q3 in [DATA.md](DATA.md) were closed by the owner on
+2026-11-07: no AI-company text in training data. Human-written sentences are needed
+before any training with explanation text.

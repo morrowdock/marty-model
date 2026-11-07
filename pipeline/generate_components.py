@@ -19,10 +19,11 @@ Usage:
 
 Byte-identical output needs a fixed --created (the default is today's UTC date).
 
-Status: design reference. Output is NOT cleared for training until the owner
-decides the data-rights questions in DATA.md ("clearance": "pending-owner"). The
-sentence templates below were written by an AI agent (Claude Opus 5.5); every
-example records this in provenance.templateAuthor.
+Status: design reference. The sentence templates below were written by an AI agent
+(Claude Opus 5.5), so by the owner's decision of 2026-11-07 (DATA.md section 0) its
+output is NEVER training data: every example carries "clearance": "excluded" and
+records the author in provenance.templateAuthor. Human-written templates
+(docs/TEMPLATE-SLOTS.md) will replace them.
 """
 
 import argparse
@@ -42,6 +43,7 @@ REJECT_SCHEMA = "marty-model.reject/0"
 NAME = "generate_components.py"
 VERSION = "0.2.0"
 TEMPLATE_AUTHOR = "ai-agent:claude-opus-5-5"
+CLEARANCE = "excluded"  # AI-written templates: never training data (DATA.md section 0)
 TITLE_MAX, SAY_MAX = 80, 240  # engine text limits (assembly.title, step.say)
 RATIO_TOLERANCE = 1e-9
 
@@ -362,7 +364,8 @@ def generate(engine, count, seed, components, created, engine_commit, generator=
                 "source": "programmatic.components",
                 "authorKind": "program",
                 "licence": "Apache-2.0",
-                "clearance": "pending-owner",
+                "clearance": CLEARANCE,
+                "clearanceReason": "ai-written-text",
                 "templateAuthor": TEMPLATE_AUTHOR,
                 "component": component,
                 "with": values,

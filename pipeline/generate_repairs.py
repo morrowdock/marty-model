@@ -19,7 +19,7 @@ Usage:
       --examples examples.jsonl --seed 1 --out repairs.jsonl [--rejects rejects.jsonl] \\
       [--per-example 1] [--created YYYY-MM-DD]
 
-Status: design reference; output inherits "clearance": "pending-owner" (DATA.md 2).
+Status: design reference; output inherits "clearance" from its source examples (DATA.md 0).
 """
 
 import argparse
@@ -268,6 +268,7 @@ def generate(engine, catalog, examples, seed, per_example, created, engine_commi
                     "authorKind": "program",
                     "licence": prov["licence"],
                     "clearance": prov["clearance"],
+                    "clearanceReason": prov.get("clearanceReason"),
                     "templateAuthor": prov["templateAuthor"],
                     "component": component,
                     "mutation": mutation,
