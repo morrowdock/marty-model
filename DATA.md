@@ -16,16 +16,17 @@ Status: design, updated 2026-11-07 with the owner's decisions
    by a person, starting with the template slots in
    [docs/TEMPLATE-SLOTS.md](docs/TEMPLATE-SLOTS.md). The agent may not draft or
    "neutralise" those sentences; the owner writes or approves human-written ones.
-3. **Q1–Q3 are closed.** We do not ask Anthropic, OpenAI or Google for permission; we
-   do not use their outputs. Q4 and Q5 stay open.
+3. **Q1–Q3 are closed.** We do not ask Anthropic or OpenAI for permission; we do not
+   use their outputs (or any other AI company's). Q4 and Q5 stay open.
 4. **Stage 1 approved:** mlx-lm in an isolated virtual environment, two 4-bit open
    bases (IBM Granite 4.2 3B, Qwen3.5-4B), and a first small local QLoRA comparison on
-   engine-generated data only ([PLAN.md](PLAN.md) §5, `stage1/`).
+   engine-generated data only ([PLAN.md](PLAN.md) §5; the `stage1/` harness is planned in
+   a separate pull request).
 
 What this means for existing output: examples from `pipeline/generate_components.py`
 use AI-written templates, so they now carry `"clearance": "excluded"` and are never
 training data. Repair pairs made from them inherit `excluded`. Prose-free Stage 1 data
-(`stage1/make_data.py`, separate pull request) carries `"prose": false`.
+(planned `stage1/make_data.py`, separate pull request) carries `"prose": false`.
 
 This is not legal advice. Where a question is legal, it is written down for the owner
 instead of being decided here.
@@ -64,7 +65,8 @@ authorization from Anthropic" is not allowed, but that page shows an effective d
 2026-11-12, after we read it. The Consumer Terms §3 forbid using the Services to
 develop competing products, "including to develop or train any artificial intelligence
 or machine learning algorithms or models"; whether that covers a small, non-competing
-model is a question for the owner. Our working assumption, until the owner decides:
+model is a question for the owner. Our working assumption at the time (now settled by
+§0):
 the template sentences that appear in training text are Claude outputs and are
 covered. It is less clear whether scenes that a Claude-written *program* computes
 count as outputs.
@@ -76,8 +78,8 @@ program-computed scenes are affected;
 (c) have the text templates written by an open-weight model whose licence allows it
 ([§3.3](#33-open-weight-models));
 (d) do not train on any of it.
-**Recommended:** (a) and (b) together. The templates are small (about 40 sentences),
-so (b) costs the owner about an hour.
+**Superseded 2026-11-07:** the owner chose (b) (a person writes the sentences; see
+[docs/TEMPLATE-SLOTS.md](docs/TEMPLATE-SLOTS.md)), with (c) allowed; (a) is not pursued.
 
 **Q2 (closed 2026-11-07). Which Anthropic terms apply to our account?** Which agreement covers the Claude
 sessions used so far: a consumer plan (the Consumer Terms name Claude.ai and Claude
@@ -127,20 +129,21 @@ on them.
 | OpenAI | [Terms of Use](https://openai.com/policies/terms-of-use/), [Business Terms](https://openai.com/policies/business-terms/) | **UNVERIFIED**: every fetch returned HTTP 403 | Q3 |
 | Google | [Gemini API Additional Terms](https://aistudio.google.com/docs/terms) (effective 2026-03-23; the old ai.google.dev URL redirects here) | "You may not use the Services to develop models that compete with the Services"; you are responsible for "the use of that content by anyone you share it with" | bars competing models; we do not use Gemini outputs |
 | Mistral | [Commercial Terms](https://legal.mistral.ai/terms/commercial-terms-of-service) (effective 2026-09-25), §3.3, §2.2(e) | §3.3: "Customer may not use image Outputs to develop or train any image generation product that competes with a Mistral AI Product"; §2.2(e): no use of Output to reverse engineer Mistral products; §2.2 (last paragraph): pass equivalent restrictions to end users | we found no clause on training with text outputs; not used today |
-| DeepSeek | [Open Platform Terms](https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html) (effective 2026-04-29), §4.2 | "Subject to your compliance to applicable law and our Terms", permitted uses include "training other models (such as model distillation)" | explicitly allowed, with conditions; needs owner approval as a paid API |
+| DeepSeek | [Open Platform Terms](https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html) (effective 2026-04-29), §4.2 | "Subject to your compliance to applicable law and our Terms", permitted uses include "training other models (such as model distillation)" | explicitly allowed by its terms, but excluded by the owner decision of 2026-11-07 (no AI-company text) |
 
 **Downstream readers.** None of the documents we read claims to bind a person who is
 not a party to the agreement. They bind the account holder (Anthropic: "help another
 person to access or use"; Google: responsibility for "anyone you share it with";
 Mistral: pass restrictions on to end users). Because the owner's own account produced
-the agent-written MartyGraphics text, we assume, until the owner decides, that
-publishing it under Apache-2.0 does not free *us* from these terms. A third party's
+the agent-written MartyGraphics text, we assumed that publishing it under Apache-2.0
+does not free *us* from these terms; the owner's decision (§0) now excludes that text
+in any case. A third party's
 position may differ; that is not our question to decide.
 
 ### 3.2 Built-in components and worked examples
 
 The MartyGraphics component catalog, its definitions and worked examples are
-Apache-2.0, but they were written by AI agents (see Q1). The reference generator uses
+Apache-2.0, but they were written by AI agents, so their text is excluded (§0). The reference generator uses
 only component **ids and parameter ranges** (facts about the engine's interface) and
 the engine's solved numbers. It does not copy component titles, `about` text or
 example steps into training text.
@@ -151,8 +154,8 @@ Outputs of models under Apache-2.0 or MIT (for example Granite 4.2, Qwen3.5, Gem
 SmolLM3, OLMo 3, Ministral 3, Phi-4-mini; see [PLAN.md](PLAN.md) §4) carry no output
 restriction in those licences. **Avoid** outputs of Llama 3.2 (a model trained on them
 must be named "Llama…" and carries Meta's use policy) and Gemma 3/3n (the Gemma Terms
-treat models trained on their outputs as derivatives). Using any local model needs
-the Stage 1 approval in PLAN.md (download and install).
+treat models trained on their outputs as derivatives). Local models were
+approved for Stage 1 on 2026-11-07 (§0).
 
 ## 4. Pipeline
 
@@ -209,7 +212,7 @@ finding to report to the owner and the coordinator.
 | --- | --- | --- | --- |
 | `author.solid` | learner question | scene with teaching steps | reference generator (4 components) |
 | `repair.solid` | question, refused scene, engine reason | v0.1: the full corrected scene; v0.2: a patch that the engine accepts | today: [mutation repairs](pipeline/README.md#repair-examples-generate_repairspy) (10 mutations of accepted scenes; target = the original); next: rule-based fixers on the generator's rejects (for example `component.check.spacing` → choose a planet count that divides 2 × (sun + planet)); every target re-checked by the engine |
-| `refuse.scope` | out-of-scope question | a short "not supported" answer that names what is missing | next: human-written templates (Q1) |
+| `refuse.scope` | out-of-scope question | a short "not supported" answer that names what is missing | next: human-written templates ([docs/TEMPLATE-SLOTS.md](docs/TEMPLATE-SLOTS.md), §0) |
 | `compose.solid` | question needing 2+ components | scene with `set`, `parent`, compound trains | later |
 
 Target first mixture for v0.1 (to tune on development data): about 70% author, 20%
@@ -234,7 +237,8 @@ Every record carries `provenance`:
 | `authorKind` | `program`, `person`, `open-weight-model` or `learner-correction` |
 | `licence` | licence of the example (Apache-2.0 unless stated) |
 | `clearance` | `pending-owner`, `cleared` (set only by the owner, per dataset version) or `excluded` (contains AI-company text; never training data) |
-| `templateAuthor` | who wrote the sentence templates (for example `ai-agent:claude-opus-5-5` or `human.<handle>`); decides Q1 |
+| `templateAuthor` | who wrote the sentence templates (for example `ai-agent:claude-opus-5-5` or `human.<handle>`); AI-written templates make an example `excluded` (§0) |
+| `clearanceReason` | why an example is `excluded`, for example `ai-written-text` |
 | `component`, `with` | component id and parameter values (programmatic) |
 | `generator` | name, version, seed, script SHA-256, git commit and a dirty flag (programmatic) |
 | `model` | open-weight model id, revision hash, licence URL, sampling settings (open-weight only) |

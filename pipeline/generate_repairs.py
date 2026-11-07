@@ -268,6 +268,7 @@ def generate(engine, catalog, examples, seed, per_example, created, engine_commi
                     "authorKind": "program",
                     "licence": prov["licence"],
                     "clearance": prov["clearance"],
+                    "clearanceReason": prov.get("clearanceReason"),
                     "templateAuthor": prov["templateAuthor"],
                     "component": component,
                     "mutation": mutation,

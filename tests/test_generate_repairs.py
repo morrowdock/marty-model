@@ -85,6 +85,7 @@ class Generate(unittest.TestCase):
             self.assertTrue(r["check"]["target"]["ok"])
             p = r["provenance"]
             self.assertEqual(p["clearance"], "excluded")  # inherited from the AI-template source
+            self.assertEqual(p["clearanceReason"], "ai-written-text")
             self.assertEqual(p["templateAuthor"], gc.TEMPLATE_AUTHOR)
             self.assertEqual(p["source"], "programmatic.mutation")
             self.assertIn(p["mutation"], gr.MUTATIONS)

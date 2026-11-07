@@ -102,8 +102,8 @@ python3 pipeline/generate_repairs.py --engine PATH/marty-solid --engine-commit 7
 
 Each record has `question`, `refused` (scene text), `reason` and `part` (from the
 engine) as input, and `scene` (the original) as target. `provenance` adds `mutation`,
-`fromExample`, `fromSceneSha256` and `refusedSha256`, and inherits `clearance` and
-`templateAuthor` from the source example.
+`fromExample`, `fromSceneSha256` and `refusedSha256`, and inherits `clearance`,
+`clearanceReason` and `templateAuthor` from the source example.
 
 ## Tests
 

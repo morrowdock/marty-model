@@ -12,8 +12,8 @@ Write the sentences yourself (or have another person write them), then either:
 
 * commit `pipeline/templates/human-v1.json` with a DCO sign-off, in the format at the
   end of this file, or
-* put the sentences in a dated `ACTIVE-BACKLOG.md` entry addressed to the Marty model
-  thread. The thread copies them into that file **unchanged** and records you as the
+* put the sentences in a dated entry in the coordinator's `ACTIVE-BACKLOG.md` (the
+  shared work queue outside this repository), addressed to the Marty model thread. The thread copies them into that file **unchanged** and records you as the
   author.
 
 Please say who wrote them (a name or handle for provenance). The thread does not edit,
@@ -25,89 +25,93 @@ which one and why.
 * Plain, simple English for learners (short sentences, one idea each).
 * State only numbers given by placeholders. Do not type a number yourself (the
   generator computes every number exactly, and the engine checks the gear ratios).
-* Do not claim checks that the engine does not make. The engine checks shapes, joints,
-  tooth meshing, the solved gear ratios and the crank-rod motion. It does **not**
-  check strength, friction, losses, wear, air flow or thrust.
+* Do not claim checks that the engine does not make. What the engine checks: shapes
+  (closed meshes), joints, tooth meshing, the solved gear ratios, and the crank-rod
+  motion. For the propeller it checks only closed shapes and joints. What it does
+  **not** check: strength, friction, losses, wear, air flow and thrust. The "honesty"
+  slots say this in the writer's own words.
 * No brand names, no people, no mention of AI.
 * A title: at most 80 characters after the placeholders are filled. A step: at most
   240 characters. Keep a step to one or two sentences.
 * Placeholders are written in braces, exactly as listed, for example `{p}`.
 * Where a slot asks for "1 to 3 variants", one is enough; more variants give more
   varied training questions.
+* The "Topic" column only names what the slot is about. The "Facts" column lists
+  facts the slot must state, in technical shorthand. Neither is wording to copy.
 
 ## Spur gear pair (`spurPair`)
 
 Placeholders: `{p}` pinion teeth, `{w}` wheel teeth, `{m}` module in mm,
-`{ratio}` the turns ratio written as a fraction (for example `16/36 = 4/9`), `{factor}`
-how many times slower the wheel turns (for example `9/4 ≈ 2.25`), `{centre}` the centre
-distance in mm, `{sum}` the expression `({p} + {w}) × {m} / 2`.
+`{ratio}` the turns ratio as a fraction (for example `16/36 = 4/9`), `{factor}` the
+speed reduction factor (for example `9/4 ≈ 2.25`), `{centre}` the centre distance in mm,
+`{sum}` the expression `({p} + {w}) × {m} / 2`.
 
-| Slot | Purpose | Must include |
-| --- | --- | --- |
-| `spur.question` (1–3 variants) | the learner's question | `{p}` and `{w}`; may include `{m}` |
-| `spur.title` | scene title | `{p}` and `{w}` |
-| `spur.step1` | what the learner sees: two gears with the same tooth size | `{p}`, `{w}`, `{m}` |
-| `spur.step2` | the input: the small gear turns | `{p}` |
-| `spur.step3` | the output: how far the big gear turns per input turn, and its direction (opposite) | `{ratio}` |
-| `spur.step4` | the speed result and the centre distance | `{factor}`, `{sum}`, `{centre}` |
-| `spur.honesty` | what the engine checked and what it did not model | no placeholders |
+| Slot | Topic | Facts | Placeholders |
+| --- | --- | --- | --- |
+| `spur.question` (1–3 variants) | learner question | — | `{p}`, `{w}`; optional `{m}` |
+| `spur.title` | scene title | — | `{p}`, `{w}` |
+| `spur.step1` | parts shown | equal module | `{p}`, `{w}`, `{m}` |
+| `spur.step2` | input part | — | `{p}` |
+| `spur.step3` | output part | output direction: opposite | `{ratio}` |
+| `spur.step4` | result | speed factor; centre distance formula | `{factor}`, `{sum}`, `{centre}` |
+| `spur.honesty` | limits of the check | see the rules above | none |
 
 ## Planetary gear stage (`planetaryStage`)
 
 Placeholders: `{s}` sun teeth, `{pl}` planet teeth, `{n}` number of planets, `{r}` ring
-teeth (`{s} + 2 × {pl}`), `{carrier}` the carrier turns per sun turn as a fraction,
-`{factor}` how many times slower the carrier turns.
+teeth, `{carrier}` carrier turns per sun turn as a fraction, `{factor}` the speed
+reduction factor.
 
-| Slot | Purpose | Must include |
-| --- | --- | --- |
-| `planetary.question` (1–3 variants) | the learner's question | `{s}`; may include `{pl}`, `{n}` |
-| `planetary.title` | scene title | `{s}`, `{n}`, `{r}` |
-| `planetary.step1` | the parts: planets on a carrier between the sun and a fixed ring | `{n}`, `{s}`, `{r}` |
-| `planetary.step2` | the input: the sun turns | none |
-| `planetary.step3` | each planet meshes with the sun and rolls in the ring; how the ring tooth count follows | `{pl}`, `{s}`, `{r}` |
-| `planetary.step4` | the output: carrier turns per sun turn, same direction | `{s}`, `{r}`, `{carrier}` |
-| `planetary.step5` | the speed result (shown exploded) | `{factor}` |
-| `planetary.honesty` | what the engine checked and what it did not model | no placeholders |
+| Slot | Topic | Facts | Placeholders |
+| --- | --- | --- | --- |
+| `planetary.question` (1–3 variants) | learner question | — | `{s}`; optional `{pl}`, `{n}` |
+| `planetary.title` | scene title | — | `{s}`, `{n}`, `{r}` |
+| `planetary.step1` | parts shown | ring held fixed | `{n}`, `{s}`, `{r}` |
+| `planetary.step2` | input part | input: sun | none |
+| `planetary.step3` | planets | ring teeth = sun teeth + 2 × planet teeth | `{pl}`, `{s}`, `{r}` |
+| `planetary.step4` | output part | output: carrier; direction: same as input | `{s}`, `{r}`, `{carrier}` |
+| `planetary.step5` | result (exploded view) | speed factor | `{factor}` |
+| `planetary.honesty` | limits of the check | see the rules above | none |
 
 ## Slider-crank (`sliderCrank`)
 
 Placeholders: `{r}` crank radius in mm, `{rod}` connecting rod length in mm, `{stroke}`
-piston stroke in mm (`2 × {r}`).
+piston stroke in mm.
 
-| Slot | Purpose | Must include |
-| --- | --- | --- |
-| `crank.question` (1–3 variants) | the learner's question | `{r}` or `{rod}` |
-| `crank.title` | scene title | `{r}`, `{rod}` |
-| `crank.step1` | what the mechanism does: turning motion to straight back-and-forth motion | none |
-| `crank.step2` | the input: the crank turns; its pin moves on a circle | `{r}` |
-| `crank.step3` | the rod joins the crank pin to the piston | `{rod}` |
-| `crank.step4` | the piston stroke per crank turn | `{r}`, `{stroke}` |
-| `crank.honesty` | what the engine checked and what it did not model | no placeholders |
+| Slot | Topic | Facts | Placeholders |
+| --- | --- | --- | --- |
+| `crank.question` (1–3 variants) | learner question | — | `{r}` or `{rod}` |
+| `crank.title` | scene title | — | `{r}`, `{rod}` |
+| `crank.step1` | purpose of the mechanism | input: rotation; output: linear reciprocation | none |
+| `crank.step2` | input part | crank pin path radius | `{r}` |
+| `crank.step3` | link part | rod length | `{rod}` |
+| `crank.step4` | result | stroke = 2 × crank radius, per crank turn | `{r}`, `{stroke}` |
+| `crank.honesty` | limits of the check | see the rules above | none |
 
 ## Propeller (`propeller`)
 
 Placeholders: `{n}` number of blades, `{span}` blade length in mm, `{root}` blade angle
 at the root in degrees, `{tip}` blade angle at the tip in degrees (always smaller).
 
-| Slot | Purpose | Must include |
-| --- | --- | --- |
-| `propeller.question` (1–3 variants) | the learner's question | `{n}`; may include `{span}` |
-| `propeller.title` | scene title | `{n}`, `{span}` |
-| `propeller.step1` | what the learner sees: blades on a hub | `{n}`, `{span}` |
-| `propeller.step2` | the input: the hub turns and the blades turn with it | `{n}` |
-| `propeller.step3` | the blade is steeper at the root than at the tip; one short reason | `{root}`, `{tip}` |
-| `propeller.honesty` | what the engine checked (closed shapes, joints) and what it did not model (air flow, thrust, strength) | no placeholders |
+| Slot | Topic | Facts | Placeholders |
+| --- | --- | --- | --- |
+| `propeller.question` (1–3 variants) | learner question | — | `{n}`; optional `{span}` |
+| `propeller.title` | scene title | — | `{n}`, `{span}` |
+| `propeller.step1` | parts shown | blade count; blade length | `{n}`, `{span}` |
+| `propeller.step2` | input part | input: hub | `{n}` |
+| `propeller.step3` | blade shape | root angle > tip angle; one cause, in the writer's words | `{root}`, `{tip}` |
+| `propeller.honesty` | limits of the check | see the rules above (propeller line) | none |
 
 ## Honest refusal (new, for questions the engine cannot show)
 
-Placeholders: `{topic}` a short name of what was asked (for example "a bevel gear"),
-`{missing}` the missing engine feature, `{nearest}` the nearest thing the engine can
-show.
+Placeholders: `{topic}` what was asked, `{missing}` the missing engine feature,
+`{nearest}` the nearest thing the engine can show. Their values come from the
+`refusal.topics` list, which a person also writes.
 
-| Slot | Purpose | Must include |
-| --- | --- | --- |
-| `refusal.answer` (1–3 variants) | say plainly that this cannot be shown yet, name what is missing, offer the nearest supported scene | `{topic}`, `{missing}`; may include `{nearest}` |
-| `refusal.topics` (a list, 5 or more rows) | the values for the placeholders: one row per kind of question the engine cannot show yet, each with `topic`, `missing` and `nearest` | short phrases, also written by a person (the thread may not write this list) |
+| Slot | Topic | Facts | Placeholders |
+| --- | --- | --- | --- |
+| `refusal.answer` (1–3 variants) | out-of-scope answer | not supported yet; what is missing; nearest supported scene | `{topic}`, `{missing}`; optional `{nearest}` |
+| `refusal.topics` (a list, 5 or more rows) | the placeholder values | one row per kind of question the engine cannot show yet, with `topic`, `missing`, `nearest` | — (short phrases written by a person; the thread may not write this list) |
 
 ## File format
 
