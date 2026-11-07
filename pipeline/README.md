@@ -90,9 +90,10 @@ scene, as v0.1 needs; patches come later).
 A pair is kept only when the engine refuses the mutated scene with **exactly** the
 reason in the table and still accepts the original with the same ratios. Otherwise it
 goes to the rejects file (`repair.mutationAccepted`, `repair.unexpectedReason`,
-`repair.targetChanged`), and an unexpected reason or a changed target makes the run exit
-1. Parameter ranges come from `marty-solid components` (the engine's catalog). Input
-examples must come from the same engine commit; input files are bounded (256 MiB, 128 KiB
+`repair.targetChanged`, `repair.componentNotInCatalog`). An unexpected reason, a changed
+target, a component missing from the catalog, or no repairs at all makes the run exit 1. Parameter ranges come from `marty-solid components` (the engine's catalog). Input
+examples must carry exactly the `--engine-commit` string given here (same spelling, short
+or full) and a matching `sceneSha256`; ids must be unique; input files are bounded (256 MiB, 128 KiB
 per line, 200,000 examples).
 
 ```sh
