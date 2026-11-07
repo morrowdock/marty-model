@@ -6,7 +6,7 @@ fine_tune_type: lora
 num_layers: 16
 batch_size: 1
 learning_rate: 1.0e-4
-max_seq_length: 1024
+max_seq_length: 512  # longest Stage 1 row is 173 tokens (Granite tokenizer)
 grad_checkpoint: true
 mask_prompt: true
 steps_per_report: 10

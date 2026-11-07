@@ -8,16 +8,17 @@ lives in a folder **outside the repository**, called `$STAGE` below. Nothing fro
 
 ## What it measures, and what it does not
 
-Measured, per model, on a development split made by the same generator with other
-seeds (not the sealed sets):
+Measured, per model, on a development split made by the same generator (its own random
+stream, `seed:dev`; no dev prompt or target equals a train one; not the sealed sets):
 
 * engine acceptance on the first try and within 3 repairs (`marty-solid check` at
   MartyGraphics 76104dea; `--strict` does not exist at that commit yet);
 * correctness: for `author.ratio`, the engine's solved ratio equals the asked ratio and
   the fixed values are kept; for `author.params` and `repair`, the accepted scene keeps
   exactly the intended values;
-* repairs used, seconds per answer, output tokens per second and peak memory, on the
-  M1 mini (8 GB), as measured by MLX and `/usr/bin/time -l`.
+* repairs used, seconds per answer, generation tokens per second and peak memory, on
+  the M1 mini (8 GB), as reported by `mlx_lm.stream_generate`, MLX and
+  `/usr/bin/time -l`.
 
 Not measured: explanation text (no prose in Stage 1 data, by the owner's rule), the
 sealed evaluation sets, iPad speed, and anything about strength or real-world physics.
@@ -35,7 +36,14 @@ no sentences, no teaching steps; the scene title is the component id.
 
 Default sizes: train 1,300, valid 100 (for the training loss), dev 100 (for evaluation),
 mix about 3 : 3 : 1 : 1 : 4 (spur ratio, planetary ratio, crank, propeller, repair).
-Splits never share a target scene.
+Splits never share a target scene or a prompt.
+
+**Prompt format.** Both bases' chat templates turn on "thinking" by default. Training
+renders each row with the template's defaults; evaluation builds the prompt with
+`enable_thinking=False`, which is exactly the prefix the training render puts before
+the answer. `check_template.py` proves this for every row before training (and
+`run_eval.py` checks it again at start-up) and records where mlx-lm's loss mask
+starts.
 
 ## Procedure
 
@@ -58,7 +66,9 @@ export HF_HOME="$STAGE/hf"   # keep the Hub cache inside $STAGE
 # 3. Data (engine calls; through the gate)
 gate python3 stage1/make_data.py --engine "$ENGINE" --engine-commit 76104dea --out-dir "$STAGE/data/v1" --seed 1
 
-# 4. Untrained reference (small), then training chunks, then evaluation chunks
+# 4. Template check (tokenizer only), untrained reference (small), training chunks, evaluation chunks
+"$STAGE/venv/bin/python" stage1/check_template.py --model "$STAGE/models/granite" --data "$STAGE/data/v1" \
+  --split train --receipt "$STAGE/receipts/template-granite.json"
 gate "$STAGE/venv/bin/python" stage1/run_eval.py --model "$STAGE/models/granite" --data "$STAGE/data/v1" \
   --engine "$ENGINE" --engine-commit 76104dea --out "$STAGE/runs/granite-base-0.jsonl" --start 0 --limit 20
 gate "$STAGE/venv/bin/python" stage1/train_chunk.py --model "$STAGE/models/granite" --data "$STAGE/data/v1" \
@@ -87,12 +97,22 @@ notices and a statement of changes). Nothing is redistributed in Stage 1.
 ## Settings (`lora.yaml`)
 
 QLoRA (LoRA on the 4-bit base): rank 8, scale 20, 16 layers, batch 1, learning rate
-1e-4 (constant), sequence length 1,024, gradient checkpointing, loss on the answer only.
-Smaller than [PLAN.md](../PLAN.md) §5 (rank 16) because the mini has 8 GB and is shared.
-Each chunk is at most 400 iterations; chunk *k* uses data-order seed *k*.
+1e-4 (constant), sequence length 512 (the longest row is 173 tokens), gradient
+checkpointing, loss on the answer only. Smaller than [PLAN.md](../PLAN.md) §5 (rank 16)
+because the mini has 8 GB and is shared.
+
+**Chunks.** Each chunk is one heavy-gate job of at most 400 iterations and 40 minutes
+(a timeout stops the whole process group). Chunk *k* trains on the next rows of one
+fixed shuffle of `train.jsonl`, so no row repeats until every row was seen once (with
+batch size 1, each row once per chunk). Chunk *k* resumes from chunk *k − 1*'s adapter;
+the optimizer (Adam) state starts fresh in each chunk, and the learning rate is
+constant. `train_chunk.py` runs mlx-lm in-process through `lora_runner.py`, so the
+receipt gets the losses, tokens per second and peak memory from mlx-lm's own callback.
 
 ## Receipts
 
-`download.py`, `train_chunk.py` and `run_eval.py` each write a receipt (versions,
-revision, file sizes and SHA-256, seconds, peak memory, losses, adapter SHA-256). The
+`download.py`, `check_template.py`, `train_chunk.py` and `run_eval.py` each write a
+receipt (versions, revision, file sizes and SHA-256, template check, seconds, peak
+memory, losses, adapter SHA-256). `summarize.py` refuses to mix runs (different model,
+adapter, checker or token limit). The
 results page for Stage 1 quotes these receipts; anything not measured is marked so.

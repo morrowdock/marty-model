@@ -11,7 +11,7 @@ import harness  # noqa: E402
 
 
 def main(paths):
-    results, seen = [], set()
+    results, seen, runs = [], set(), set()
     for path in paths:
         with open(path, encoding="utf-8") as f:
             for line in f:
@@ -19,7 +19,12 @@ def main(paths):
                 if r["id"] in seen:
                     raise SystemExit(f"duplicate item {r['id']} in {path}")
                 seen.add(r["id"])
+                run = r.get("run", {})
+                runs.add((run.get("model"), run.get("adapterSha256"), run.get("checkerSha256"), run.get("maxTokens")))
                 results.append(r)
+    if len(runs) > 1:
+        raise SystemExit(f"these files mix {len(runs)} different runs (model, adapter, checker, max tokens); "
+                         "summarise each run separately")
     print(json.dumps(harness.summarize(results), indent=1, sort_keys=True))
     return 0
 

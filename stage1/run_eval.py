@@ -69,16 +69,35 @@ def main(argv=None):
     load_seconds = time.perf_counter() - t0
     sampler = make_sampler(temp=0.0)
 
+    def prompt_ids(messages):
+        # enable_thinking=False gives exactly the prefix that mlx-lm's training render
+        # puts before the answer (checked below, and by stage1/check_template.py).
+        return tokenizer.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False,
+                                             return_dict=False)
+
+    # Startup check: the training render of this split's first row must start with the
+    # evaluation prompt; otherwise the adapter is evaluated on a prompt it never saw.
+    first = rows[0]["messages"]
+    full = tokenizer.apply_chat_template(first, return_dict=False)
+    head = prompt_ids(first[:-1])
+    if full[:len(head)] != head:
+        raise SystemExit("evaluation prompt is not a prefix of the training render; refusing to evaluate")
+
     def generate(user):
-        prompt = tokenizer.apply_chat_template([{"role": "user", "content": user}], add_generation_prompt=True,
-                                               tokenize=False)
-        prompt_tokens = len(tokenizer.encode(prompt))
+        ids = prompt_ids([{"role": "user", "content": user}])
         mx.reset_peak_memory()
         start = time.perf_counter()
-        text = mlx_lm.generate(model, tokenizer, prompt=prompt, max_tokens=a.max_tokens, sampler=sampler)
+        text, last = "", None
+        for response in mlx_lm.stream_generate(model, tokenizer, prompt=ids, max_tokens=a.max_tokens,
+                                               sampler=sampler):
+            text += response.text
+            last = response
         seconds = time.perf_counter() - start
-        return text, {"seconds": round(seconds, 3), "promptTokens": prompt_tokens,
-                      "outputTokens": len(tokenizer.encode(text)),
+        return text, {"seconds": round(seconds, 3), "promptTokens": last.prompt_tokens if last else len(ids),
+                      "outputTokens": last.generation_tokens if last else 0,
+                      "promptTps": round(last.prompt_tps, 1) if last else None,
+                      "generationTps": round(last.generation_tps, 1) if last else None,
+                      "finish": last.finish_reason if last else None,
                       "peakMemoryGB": round(mx.get_peak_memory() / 1e9, 3)}
 
     engine = gc.Engine([a.engine], a.engine)

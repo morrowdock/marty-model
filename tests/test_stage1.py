@@ -94,11 +94,19 @@ class MakeData(unittest.TestCase):
             self.assertNotEqual(refused, row["messages"][1]["content"])
 
     def test_splits_are_disjoint_and_deterministic(self):
-        seen = set()
-        train, _ = build(40, "train", seen=seen)
-        dev, _ = build(20, "dev", seen=seen)
+        seen, users = set(), set()
+        engine = fake()
+        try:
+            catalog = gr.load_catalog(engine)
+            train, _ = md.build(engine, catalog, 80, 1, "train", "2026-11-07", "76104dea", None, seen, users)
+            dev, _ = md.build(engine, catalog, 40, 1, "dev", "2026-11-07", "76104dea", None, seen, users)
+        finally:
+            engine.close()
         targets = lambda rows: {r["messages"][1]["content"] for r in rows}  # noqa: E731
+        prompts = lambda rows: {r["messages"][0]["content"] for r in rows}  # noqa: E731
         self.assertFalse(targets(train) & targets(dev))
+        self.assertFalse(prompts(train) & prompts(dev))
+        train, _ = build(40, "train")
         again, _ = build(40, "train")
         self.assertEqual(train, again)
 
@@ -144,6 +152,8 @@ class Harness(unittest.TestCase):
 
     def test_clean(self):
         self.assertEqual(harness.clean('<think>x</think>\n```json\n{"a":1}\n```\n'), '{"a":1}')
+        self.assertEqual(harness.clean('<think>reasoning cut off by the limit'), '')
+        self.assertEqual(harness.clean('{"a":1}<think>tail'), '{"a":1}')
         self.assertEqual(harness.clean('  {"a":1}  '), '{"a":1}')
 
     def test_correct_first_try(self):
@@ -207,6 +217,53 @@ class Harness(unittest.TestCase):
                                     self.engine.check)
         s = harness.summarize([good, dict(bad, id="other")])["all"]
         self.assertEqual((s["n"], s["acceptedFirst"], s["acceptedWithin3"], s["correct"]), (2, 1, 1, 1))
+
+
+class TrainingAndSummary(unittest.TestCase):
+    def test_chunks_cover_every_row_once_before_repeating(self):
+        import train_chunk
+        lines = [f"row{i}" for i in range(250)]
+        seen = []
+        for k in (1, 2, 3):  # 3 x 100 = 300 > 250: chunk 3 wraps to a new pass
+            rows, start = train_chunk.chunk_rows(lines, k, 100)
+            self.assertEqual(start, (k - 1) * 100)
+            seen += rows
+        self.assertEqual(len(set(seen[:250])), 250)       # first pass: every row exactly once
+        self.assertEqual(seen[250:], seen[:50])           # then the same order again
+        self.assertEqual(train_chunk.chunk_rows(lines, 2, 100), train_chunk.chunk_rows(lines, 2, 100))
+
+    def test_metrics_summary(self):
+        import train_chunk
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "m.jsonl")
+            with open(path, "w") as f:
+                f.write(json.dumps({"kind": "val", "val_loss": 2.0}) + "\n")
+                f.write(json.dumps({"kind": "train", "train_loss": 1.5, "tokens_per_second": 300,
+                                    "peak_memory": 3.1, "trained_tokens": 1000}) + "\n")
+                f.write(json.dumps({"kind": "train", "train_loss": 0.9, "tokens_per_second": 310,
+                                    "peak_memory": 3.0, "trained_tokens": 2000}) + "\n")
+                f.write(json.dumps({"kind": "val", "val_loss": 1.1}) + "\n")
+            m = train_chunk.summarize_metrics(path)
+        self.assertEqual((m["trainLoss"], m["valLoss"], m["peakMemoryGB"], m["trainedTokens"]), (0.9, 1.1, 3.1, 2000))
+
+    def test_summarize_refuses_mixed_runs(self):
+        import summarize
+        with tempfile.TemporaryDirectory() as d:
+            paths = []
+            for i, sha in enumerate(("a" * 64, "b" * 64)):
+                path = os.path.join(d, f"r{i}.jsonl")
+                row = {"id": f"x{i}", "task": "repair", "component": "spurPair", "acceptedFirst": True,
+                       "accepted": True, "correct": True, "repairs": 0, "peakMemoryGB": 1,
+                       "attempts": [{"seconds": 1}], "run": {"model": "m", "adapterSha256": sha}}
+                with open(path, "w") as f:
+                    f.write(json.dumps(row) + "\n")
+                paths.append(path)
+            import contextlib
+            import io
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(summarize.main(paths[:1]), 0)
+            with self.assertRaisesRegex(SystemExit, "mix 2 different runs"):
+                summarize.main(paths)
 
 
 class RepairFixes(unittest.TestCase):

@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 import time
@@ -30,8 +31,8 @@ def main(argv=None):
     ap.add_argument("--receipt", required=True)
     ap.add_argument("--keep-free-gb", type=float, default=4.0)
     a = ap.parse_args(argv)
-    if len(a.revision) != 40:
-        ap.error("--revision must be a full 40-character commit SHA")
+    if not re.fullmatch(r"[0-9a-f]{40}", a.revision):
+        ap.error("--revision must be a full 40-character lowercase hex commit SHA")
     for path in (a.dest, a.receipt):
         if os.path.exists(path):
             ap.error(f"{path} exists; refusing to overwrite")

@@ -20,12 +20,13 @@ from fractions import Fraction
 
 MAX_ANSWER_CHARS = 64 * 1024
 THINK = re.compile(r"<think>.*?</think>", re.S)
+OPEN_THINK = re.compile(r"<think>.*\Z", re.S)  # reasoning cut off by the token limit
 FENCE = re.compile(r"^```[a-zA-Z]*\s*\n(.*?)\n?```\s*$", re.S)
 
 
 def clean(text):
     """The model's answer as scene text: drop reasoning tags and one code fence, trim."""
-    text = THINK.sub("", text[:MAX_ANSWER_CHARS]).strip()
+    text = OPEN_THINK.sub("", THINK.sub("", text[:MAX_ANSWER_CHARS])).strip()
     m = FENCE.match(text)
     return (m.group(1) if m else text).strip()
 
@@ -99,7 +100,8 @@ def summarize(results):
             return {"n": 0}
         secs = sorted(r["attempts"][0].get("seconds", 0) for r in rows)
         toks = sum(a.get("outputTokens", 0) for r in rows for a in r["attempts"])
-        gen_s = sum(a.get("seconds", 0) for r in rows for a in r["attempts"])
+        gen_s = sum(a.get("seconds", 0) for r in rows for a in r["attempts"])  # includes prompt processing
+        tps = [a["generationTps"] for r in rows for a in r["attempts"] if a.get("generationTps")]
         return {
             "n": n,
             "acceptedFirst": sum(r["acceptedFirst"] for r in rows),
@@ -109,7 +111,8 @@ def summarize(results):
                                              max(1, sum(r["accepted"] for r in rows)), 3),
             "firstAnswerSecondsP50": secs[(n - 1) // 2],
             "firstAnswerSecondsP95": secs[min(n - 1, int(round(0.95 * (n - 1))))],
-            "outputTokensPerSecond": round(toks / gen_s, 2) if gen_s else None,
+            "outputTokensPerSecondWall": round(toks / gen_s, 2) if gen_s else None,
+            "generationTokensPerSecondMedian": sorted(tps)[(len(tps) - 1) // 2] if tps else None,
             "peakMemoryGB": max(r["peakMemoryGB"] for r in rows),
         }
     out = {"all": block(results)}

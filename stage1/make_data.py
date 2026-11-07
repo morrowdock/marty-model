@@ -97,8 +97,10 @@ def sha(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def build(engine, catalog, n, seed, split, created, engine_commit, generator, seen_scenes):
-    """n examples for one split. `seen_scenes` (set of scene sha256) keeps splits disjoint."""
+def build(engine, catalog, n, seed, split, created, engine_commit, generator, seen_scenes, seen_users=None):
+    """n examples for one split. `seen_scenes` and `seen_users` (sets of sha256 of the target
+    scene and of the user text) keep splits disjoint: no dev prompt equals a train prompt."""
+    seen_users = set() if seen_users is None else seen_users
     rng = random.Random(f"{seed}:{split}")
     weights = [w for *_, w in MIX]
     rows, metas, attempts = [], [], 0
@@ -128,6 +130,8 @@ def build(engine, catalog, n, seed, split, created, engine_commit, generator, se
         if task == "repair":
             doc = json.loads(target_scene)
             mutation = rng.choice(REPAIR_MUTATIONS)
+            if component not in catalog:
+                raise RuntimeError(f"component {component} is not in the engine catalog")
             result = gr.MUTATIONS[mutation](doc, catalog[component], rng)
             if result is None:
                 continue
@@ -138,8 +142,11 @@ def build(engine, catalog, n, seed, split, created, engine_commit, generator, se
                 continue  # keep only exact, known refusals
             user = repair_user(refusal["reason"], refusal.get("part"), refused)
             want = {"reason": refusal["reason"], "mutation": mutation}
+        if sha(user) in seen_users:
+            continue  # the same prompt (for example the same ratio) already exists in some split
         slot = None
         seen_scenes.add(sha(target_scene))
+        seen_users.add(sha(user))
         rows.append({"messages": [{"role": "user", "content": user},
                                   {"role": "assistant", "content": target_scene}]})
         metas.append({
@@ -179,19 +186,19 @@ def main(argv=None):
     for name in ("train", "valid", "dev"):
         if not 1 <= getattr(a, name) <= 50_000:
             ap.error(f"--{name} must be 1..50000")
-    if os.path.exists(a.out_dir) and os.listdir(a.out_dir):
+    if os.path.exists(a.out_dir) and (not os.path.isdir(a.out_dir) or os.listdir(a.out_dir)):
         ap.error(f"{a.out_dir} is not empty; refusing to overwrite")
     os.makedirs(a.out_dir, exist_ok=True)
 
     engine = gc.Engine([a.engine], a.engine)
-    seen = set()
+    seen, seen_users = set(), set()
     summary = {"engineCommit": a.engine_commit, "checkerSha256": engine.sha256, "seed": a.seed, "files": {}}
     try:
         catalog = gr.load_catalog(engine)
         ident = gc.generator_identity(__file__)
         for split in ("train", "valid", "dev"):
             rows, metas = build(engine, catalog, getattr(a, split), a.seed, split, a.created, a.engine_commit,
-                                ident, seen)
+                                ident, seen, seen_users)
             for suffix, data in ((".jsonl", rows), (".meta.jsonl", metas)):
                 path = os.path.join(a.out_dir, split + suffix)
                 write(path, data)
