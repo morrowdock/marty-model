@@ -83,11 +83,13 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m unittest discover -s tests -v 2>&1 | tee logs/tests.log
-          # Run the real-engine test by name: a missing (renamed) test is an error, and a
+          # Run the real-engine tests by name: a missing (renamed) test is an error, and a
           # skip (no MARTY_SOLID) is a failure here.
-          python3 -m unittest -v tests.test_generate_components.RealEngine.test_real_engine_accepts_every_emitted_scene \
+          python3 -m unittest -v \
+            tests.test_generate_components.RealEngine.test_real_engine_accepts_every_emitted_scene \
+            tests.test_generate_repairs.RealEngine.test_real_engine_refuses_each_mutation_with_the_expected_reason \
             2>&1 | tee logs/real-engine.log
-          if grep -q "skipped" logs/real-engine.log; then echo "real-engine test skipped" >&2; exit 1; fi
+          if grep -q "skipped=" logs/real-engine.log; then echo "real-engine test skipped" >&2; exit 1; fi
           grep -qx "OK" logs/real-engine.log
       - name: Upload logs
         if: ${{ always() }}

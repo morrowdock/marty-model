@@ -184,7 +184,7 @@ finding to report to the owner and the coordinator.
 | Kind | Input | Target | Source today |
 | --- | --- | --- | --- |
 | `author.solid` | learner question | scene with teaching steps | reference generator (4 components) |
-| `repair.solid` | question, refused scene, engine reason | v0.1: the full corrected scene; v0.2: a patch that the engine accepts | next: rule-based fixers on the generator's rejects (for example `component.check.spacing` → choose a planet count that divides 2 × (sun + planet)), plus deliberate mutations of valid scenes (drop a required key, unknown key, bad reference) with the inverse fix; every target re-checked by the engine |
+| `repair.solid` | question, refused scene, engine reason | v0.1: the full corrected scene; v0.2: a patch that the engine accepts | today: [mutation repairs](pipeline/README.md#repair-examples-generate_repairspy) (10 mutations of accepted scenes; target = the original); next: rule-based fixers on the generator's rejects (for example `component.check.spacing` → choose a planet count that divides 2 × (sun + planet)); every target re-checked by the engine |
 | `refuse.scope` | out-of-scope question | a short "not supported" answer that names what is missing | next: human-written templates (Q1) |
 | `compose.solid` | question needing 2+ components | scene with `set`, `parent`, compound trains | later |
 

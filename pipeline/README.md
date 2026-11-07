@@ -64,7 +64,45 @@ One JSON object per line:
 
 Rejects (`marty-model.reject/0`) keep `component`, `with`, `scene`, `reason`, `part`
 (and the exit code and start of stderr for engine faults).
-They are raw material for repair examples (refused scene + reason → fixed scene).
+They are raw material for later rule-based repair examples (refused scene + reason →
+fixed scene with new parameters); the mutation repairs below do not use them.
+
+## Repair examples (`generate_repairs.py`)
+
+Makes `repair.solid` examples from accepted `author.solid` examples by **mutation**.
+It calls no AI model and writes no new text: the refused scene is the original with
+one known mistake, and the target is the original accepted scene (a full corrected
+scene, as v0.1 needs; patches come later).
+
+| Mutation | Mistake | Engine reason |
+| --- | --- | --- |
+| `param.rangeHigh` / `param.rangeLow` | a parameter one above its maximum / one below its minimum | `component.param.range.<name>` |
+| `param.integer` | a whole-number parameter + 0.5 | `component.param.integer.<name>` |
+| `param.valueText` | a number written as text (`"24"`) | `component.param.value.<name>` |
+| `param.typo` | last letter of a parameter name dropped | `component.param.unknown.<typo>` |
+| `param.outsideWith` | a parameter written beside `use` instead of in `with` | `component.use.unknown.<name>` |
+| `component.typo` | an `s` added to the component id | `component.unknown.<typo>` |
+| `ref.anchorTypo` | an `s` added to a highlighted id (`gears.inputs`) | `ref.unknown.<ref>` |
+| `text.titleLong` | the title repeated past 80 characters | `assembly.title` |
+| `text.sayLong` | one step repeated past 240 characters | `step.say` |
+
+A pair is kept only when the engine refuses the mutated scene with **exactly** the
+reason in the table and still accepts the original with the same ratios. Otherwise it
+goes to the rejects file (`repair.mutationAccepted`, `repair.unexpectedReason`,
+`repair.targetChanged`), and an unexpected reason or a changed target makes the run exit
+1. Parameter ranges come from `marty-solid components` (the engine's catalog). Input
+examples must come from the same engine commit; input files are bounded (256 MiB, 128 KiB
+per line, 200,000 examples).
+
+```sh
+python3 pipeline/generate_repairs.py --engine PATH/marty-solid --engine-commit 76104dea \
+  --examples out/examples.jsonl --seed 1 --per-example 2 --created 2026-11-06 --out out/repairs.jsonl
+```
+
+Each record has `question`, `refused` (scene text), `reason` and `part` (from the
+engine) as input, and `scene` (the original) as target. `provenance` adds `mutation`,
+`fromExample`, `fromSceneSha256` and `refusedSha256`, and inherits `clearance` and
+`templateAuthor` from the source example.
 
 ## Tests
 
