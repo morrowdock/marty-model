@@ -6,7 +6,7 @@ Small, focused pull requests are welcome. This project is at the planning stage.
 
 Every commit must include a DCO sign-off. By signing, you certify the
 [Developer Certificate of Origin 1.1](https://developercertificate.org/) for that
-commit. Use `git commit -s` and an email you are comfortable publishing; a GitHub
+commit (full text in [DCO](DCO)). Use `git commit -s` and an email you are comfortable publishing; a GitHub
 noreply address is recommended. A sign-off is a certification, not a cryptographic
 signature.
 

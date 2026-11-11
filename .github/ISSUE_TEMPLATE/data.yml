@@ -1,0 +1,15 @@
+name: Data or plan question
+description: A question or proposal about the data rules, provenance, base models or the plan.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach a dataset or model outputs here. Describe the source, its licence and how it would be checked.
+  - type: textarea
+    id: topic
+    attributes:
+      label: Question or proposal
+      description: Name the section of PLAN.md or DATA.md it is about.
+    validations:
+      required: true

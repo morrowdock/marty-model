@@ -1,10 +1,14 @@
 # Security policy
 
-This project is at the planning stage. Only the latest `main` branch is considered for
-security fixes; there is no security support SLA and no supported release yet.
+This project is at the planning stage. Only the latest release and the latest commit on
+`main` are considered for security fixes; there is no security support SLA.
 
-Report vulnerabilities privately to **admin@morrowdock.app**. Include the affected
-commit, the impact and minimal synthetic reproduction steps. Do not post
+Report vulnerabilities privately to [hello@morrowdock.app](mailto:hello@morrowdock.app),
+the current fallback security contact. A dedicated address, `security@morrowdock.app`,
+is planned; until this file names it as active, use `hello@morrowdock.app`. You can also
+use GitHub's private vulnerability reporting: **Security** tab, then **Report a
+vulnerability**. Include the affected commit, the impact, minimal synthetic reproduction
+steps and how we can reply to you. Do not post
 vulnerabilities, secrets, personal data or private course material in public issues.
 Never include credentials in a report. We coordinate disclosure after a fix is
 available.

@@ -1,0 +1,28 @@
+name: Bug report
+description: A wrong result or crash in the generator, the Stage 1 harness or the tests.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use synthetic data only. Do not paste credentials, personal data, private course material or evaluation items.
+  - type: input
+    id: version
+    attributes:
+      label: Release or commit, and engine commit
+      description: For example v0.1.0 and MartyGraphics d5f42c2, plus the marty-solid SHA-256 from the run summary.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Command and seed
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true

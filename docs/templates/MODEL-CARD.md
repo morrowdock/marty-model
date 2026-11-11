@@ -20,7 +20,7 @@ than leaving a field empty. Every number must point to a receipt (file + hash).
 | Parameters | total `<n>`; trainable (adapter) `<n>` |
 | Context length used in training | `<tokens>` |
 | Files and hashes | `<file>`: sha256 `<hash>` (one line per file) |
-| Contact | admin@morrowdock.app |
+| Contact | hello@morrowdock.app |
 
 ## Intended use
 

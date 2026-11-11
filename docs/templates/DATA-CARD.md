@@ -21,7 +21,7 @@ project: the MartyGraphics coordinator owns and describes them.
 | Format | JSON Lines, one example per line, schema `<schema id>` |
 | Generator | `<script>` at commit `<sha>`, seed `<seed>` |
 | Engine | MartyGraphics commit `<sha>`; checker `<binary>` sha256 `<hash>` |
-| Contact | admin@morrowdock.app |
+| Contact | hello@morrowdock.app |
 
 ## Sources
 
