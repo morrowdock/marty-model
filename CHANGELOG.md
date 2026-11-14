@@ -1,15 +1,19 @@
 # Changelog
 
-## Unreleased
+All notable changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-Nothing yet.
+## [Unreleased]
 
-## v0.1.0 — 2026-11-11
+### Changed
+
+- Require a changelog entry for user-facing pull requests.
+
+## [0.1.0] - 2026-11-11
 
 The first tagged release: a **planning release**. There are no model weights, no training runs and no training
 data. Every change is a pull request in the [history of `main`](https://github.com/morrowdock/marty-model/commits/main).
 
-### What it holds
+### Added
 
 - **The plan** ([PLAN.md](PLAN.md)): model size, base models and licences, fine-tuning, device budgets, evaluation,
   safety, release steps and costs.

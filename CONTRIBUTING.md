@@ -38,7 +38,7 @@ a generator or a dataset:
 * Add a test for each behaviour you change. Run
   `python3 -m unittest discover -s tests`.
 * Keep scripts deterministic: the same seed gives the same bytes.
-* Hosted checks run by hand for an exact head (no automatic PR jobs, no secrets):
+* Hosted engine checks run by hand for an exact head (no automatic engine PR jobs, no secrets):
   `gh workflow run ci.yml -f base_sha=<full base SHA> -f head_sha=<full head SHA>`.
   The Ubuntu job runs the unit tests and the DCO check; the macOS job builds
   `marty-solid` from MartyGraphics at `engine_sha` and runs the real-engine test.
@@ -47,3 +47,9 @@ a generator or a dataset:
 
 Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Report vulnerabilities as
 [SECURITY.md](SECURITY.md) describes, not in public issues.
+
+## Changelogs and releases
+
+Every merged user-facing change adds an entry to the relevant CHANGELOG.md (root, website/, or the public repo). Releases (TestFlight, site deploy, tags) fail without one. Batch site deploys into releases.
+
+The Changelog PR check covers all files except workflow configuration, tests, and contribution policy. A maintainer can set `no-changelog` for changes with no user-facing effect. This label is not a release waiver.
